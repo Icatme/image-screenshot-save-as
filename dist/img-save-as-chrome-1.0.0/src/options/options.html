@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Img Save As Settings</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3f0e8;
+        --paper: #fffdf9;
+        --ink: #1f1d1a;
+        --muted: #675f52;
+        --line: #d2c8b7;
+        --accent: #1e5ec9;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(30, 94, 201, 0.08), transparent 28%),
+          linear-gradient(180deg, #faf7f1, var(--bg));
+        color: var(--ink);
+      }
+
+      main {
+        width: min(860px, calc(100vw - 32px));
+        margin: 40px auto;
+        padding: 32px;
+        border: 1px solid rgba(31, 29, 26, 0.08);
+        border-radius: 28px;
+        background: color-mix(in srgb, var(--paper) 92%, white 8%);
+        box-shadow: 0 14px 50px rgba(74, 56, 24, 0.08);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(28px, 4vw, 40px);
+        line-height: 1.05;
+        letter-spacing: -0.04em;
+      }
+
+      .intro {
+        margin: 14px 0 0;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.7;
+        max-width: 58ch;
+      }
+
+      form {
+        display: grid;
+        gap: 18px;
+        margin-top: 30px;
+      }
+
+      .panel {
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.76);
+      }
+
+      .panel h2 {
+        margin: 0 0 8px;
+        font-size: 16px;
+      }
+
+      .panel p {
+        margin: 0 0 16px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .field-grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .field-grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .field {
+        display: grid;
+        gap: 8px;
+      }
+
+      .toggle {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #fff;
+      }
+
+      .toggle input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin: 0;
+      }
+
+      label {
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      input[type="range"] {
+        width: 100%;
+      }
+
+      .value {
+        font-variant-numeric: tabular-nums;
+        color: var(--accent);
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        appearance: none;
+        border: 0;
+        border-radius: 999px;
+        background: var(--ink);
+        color: #fff;
+        padding: 12px 18px;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button.secondary {
+        background: transparent;
+        color: var(--muted);
+        border: 1px solid var(--line);
+      }
+
+      .status {
+        min-height: 24px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .list-item {
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #fff;
+      }
+
+      .list-item[data-status="error"] {
+        border-color: #e6b8b1;
+        background: #fff8f6;
+      }
+
+      .list-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 6px;
+        font-size: 13px;
+      }
+
+      .list-title {
+        font-weight: 700;
+        word-break: break-all;
+      }
+
+      .list-time {
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .list-message,
+      .list-meta {
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.5;
+        word-break: break-word;
+      }
+
+      .list-meta {
+        font-size: 12px;
+        margin-top: 6px;
+      }
+
+      .empty {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      dialog {
+        width: min(760px, calc(100vw - 24px));
+        padding: 0;
+        border: 1px solid rgba(31, 29, 26, 0.08);
+        border-radius: 24px;
+        background: var(--paper);
+        color: var(--ink);
+        box-shadow: 0 24px 80px rgba(31, 29, 26, 0.2);
+      }
+
+      dialog::backdrop {
+        background: rgba(31, 29, 26, 0.32);
+      }
+
+      .dialog-body {
+        padding: 22px;
+      }
+
+      .dialog-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .dialog-title {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      @media (max-width: 720px) {
+        main {
+          margin: 16px auto;
+          padding: 22px;
+          border-radius: 22px;
+        }
+
+        .field-grid.two {
+          grid-template-columns: 1fr;
+        }
+
+        .actions {
+          flex-direction: column;
+          align-items: stretch;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Img Save As</h1>
+      <p class="intro">
+        这是一个纯本地执行的图片右键扩展。这里保留第一版必要配置：导出质量、静默保存，以及本地保存历史。
+      </p>
+
+      <form id="settings-form">
+        <section class="panel">
+          <h2>导出质量</h2>
+          <p>PNG 始终无损。JPG 和 WebP 使用下面的质量值，范围 0.10 到 1.00。</p>
+
+          <div class="field-grid two">
+            <div class="field">
+              <label for="jpg-quality">JPG 质量 <span class="value" id="jpg-quality-value">0.92</span></label>
+              <input id="jpg-quality" name="jpgQuality" type="range" min="0.1" max="1" step="0.01" value="0.92">
+            </div>
+
+            <div class="field">
+              <label for="webp-quality">WebP 质量 <span class="value" id="webp-quality-value">0.92</span></label>
+              <input id="webp-quality" name="webpQuality" type="range" min="0.1" max="1" step="0.01" value="0.92">
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>保存方式</h2>
+          <p>开启后会尽量直接下载，不主动弹出另存为窗口；如果 Chrome 本身开启了“下载前询问保存位置”，浏览器仍可能继续弹窗。文件名第一版保持简单，优先沿用原图名。</p>
+
+          <div class="field-grid">
+            <label class="toggle" for="silent-save">
+              <input id="silent-save" name="silentSave" type="checkbox">
+              <span>开启静默保存</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>保存历史</h2>
+          <p>历史记录默认保存在浏览器本地存储中，不依赖远程服务，也不需要 sqlite。点击按钮时再弹出查看。</p>
+          <div class="actions">
+            <button id="open-history-button" type="button">查看历史记录</button>
+            <button class="secondary" id="clear-history-button" type="button">清空历史</button>
+          </div>
+        </section>
+
+        <div class="actions">
+          <button type="submit">保存设置</button>
+          <button class="secondary" id="reset-button" type="button">恢复默认</button>
+          <div class="status" id="status" aria-live="polite"></div>
+        </div>
+      </form>
+    </main>
+
+    <dialog id="history-dialog">
+      <div class="dialog-body">
+        <div class="dialog-head">
+          <h2 class="dialog-title">保存历史</h2>
+          <button class="secondary" id="close-history-button" type="button">关闭</button>
+        </div>
+        <div class="list" id="history-list"></div>
+      </div>
+    </dialog>
+
+    <script type="module" src="./options.js"></script>
+  </body>
+</html>

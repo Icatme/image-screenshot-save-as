@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Img Save As",
+  "version": "1.0.0",
+  "description": "Save web images as PNG, JPG, or WebP locally, with optional copy path and local history.",
+  "minimum_chrome_version": "114",
+  "permissions": [
+    "contextMenus",
+    "downloads",
+    "storage",
+    "notifications",
+    "offscreen",
+    "clipboardWrite",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
+  },
+  "options_page": "src/options/options.html",
+  "action": {
+    "default_title": "Img Save As"
+  },
+  "icons": {
+    "16": "assets/icons/icon-16.png",
+    "32": "assets/icons/icon-32.png",
+    "48": "assets/icons/icon-48.png",
+    "128": "assets/icons/icon-128.png"
+  }
+}
