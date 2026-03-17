@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Img Save As",
+  "name": "__MSG_extName__",
   "version": "1.0.0",
-  "description": "Save web images as PNG, JPG, or WebP locally, with optional copy path and local history.",
+  "description": "__MSG_extDescription__",
+  "default_locale": "en",
   "minimum_chrome_version": "114",
   "permissions": [
     "contextMenus",
@@ -23,7 +24,7 @@
   },
   "options_page": "src/options/options.html",
   "action": {
-    "default_title": "Img Save As"
+    "default_title": "__MSG_extActionTitle__"
   },
   "icons": {
     "16": "assets/icons/icon-16.png",

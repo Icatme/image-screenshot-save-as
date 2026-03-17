@@ -1,5 +1,6 @@
 import { copyTextToClipboard, createBlobUrl, revokeBlobUrl } from "../lib/clipboard.js";
 import { buildDownloadPath } from "../lib/file-name.js";
+import { getTranslator } from "../lib/i18n.js";
 import { convertImageBlob } from "../lib/image-convert.js";
 import { getSettings } from "../lib/settings.js";
 
@@ -8,6 +9,9 @@ const PENDING_DOWNLOADS_KEY = "pendingDownloads";
 const RECENT_ACTIVITY_KEY = "recentActivity";
 const SAVE_HISTORY_KEY = "saveHistory";
 const processingDownloads = new Set();
+let activeLocaleOverride = null;
+let activeLocale = "en";
+let translate = (messageName) => messageName;
 
 const FORMATS = [
   { id: "png", title: "PNG" },
@@ -16,8 +20,8 @@ const FORMATS = [
 ];
 
 const ACTIONS = [
-  { id: "save", title: "Save" },
-  { id: "copy-path", title: "Save && Copy Path" }
+  { id: "save", titleKey: "menuActionSave" },
+  { id: "copy-path", titleKey: "menuActionCopyPath" }
 ];
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -36,11 +40,19 @@ chrome.downloads.onChanged.addListener((downloadDelta) => {
   void handleDownloadChanged(downloadDelta);
 });
 
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === "sync" && changes.localeOverride) {
+    void refreshTranslations();
+    void createContextMenus();
+  }
+});
+
 chrome.action.onClicked.addListener(() => {
   void chrome.runtime.openOptionsPage();
 });
 
 async function initializeExtension() {
+  await refreshTranslations();
   await createContextMenus();
   const sessionData = await chrome.storage.session.get(PENDING_DOWNLOADS_KEY);
   if (!sessionData[PENDING_DOWNLOADS_KEY]) {
@@ -49,11 +61,12 @@ async function initializeExtension() {
 }
 
 async function createContextMenus() {
+  await refreshTranslations();
   await chrome.contextMenus.removeAll();
 
   chrome.contextMenus.create({
     id: ROOT_MENU_ID,
-    title: "Image Save As",
+    title: t("menuRoot"),
     contexts: ["image"]
   });
 
@@ -70,7 +83,7 @@ async function createContextMenus() {
       chrome.contextMenus.create({
         id: buildActionMenuId(format.id, action.id),
         parentId: formatMenuId,
-        title: action.title,
+        title: t(action.titleKey),
         contexts: ["image"]
       });
     }
@@ -84,12 +97,13 @@ async function handleMenuClick(info, tab) {
   }
 
   if (!info.srcUrl) {
-    await notify("Save failed", "Chrome did not provide an image URL for this item.");
+    await notify(t("notifySaveFailedTitle"), t("notifySaveFailedNoImageUrl"), "error");
     return;
   }
 
   try {
     const settings = await getSettings();
+    await refreshTranslations(settings);
     const sourceBlob = await getSourceImageBlob(info.srcUrl, tab?.id, info.frameId);
     const converted = await convertImageBlob(sourceBlob, command.format, settings);
     const downloadPath = buildDownloadPath({
@@ -116,7 +130,7 @@ async function handleMenuClick(info, tab) {
 
     await processPendingDownload(downloadId);
   } catch (error) {
-    await notify("Save failed", getErrorMessage(error));
+    await notify(t("notifySaveFailedTitle"), getErrorMessage(error), "error");
   }
 }
 
@@ -157,7 +171,7 @@ function parseMenuId(menuItemId) {
 
 async function getSourceImageBlob(srcUrl, tabId, frameId) {
   if (!srcUrl) {
-    throw new Error("This page did not expose a usable image URL.");
+    throw new Error(t("errorNoImageUrl"));
   }
 
   if (!srcUrl.startsWith("blob:")) {
@@ -177,13 +191,13 @@ async function getSourceImageBlob(srcUrl, tabId, frameId) {
     }
   }
 
-  throw new Error("Unable to read this image. Some blob or protected images may be blocked on this page.");
+  throw new Error(t("errorUnableReadImage"));
 }
 
 async function fetchImageBlob(srcUrl) {
   const response = await fetch(srcUrl, { credentials: "include" });
   if (!response.ok) {
-    throw new Error(`Image request failed with status ${response.status}.`);
+    throw new Error(t("errorImageRequestFailed", String(response.status)));
   }
 
   return response.blob();
@@ -194,14 +208,20 @@ async function extractImageFromPage(tabId, srcUrl, frameId) {
     typeof frameId === "number" && frameId >= 0
       ? { tabId, frameIds: [frameId] }
       : { tabId };
+  const localized = {
+    pageFetchFailed: t("errorPageFetchFailed"),
+    imageNotLoaded: t("errorImageNotLoaded"),
+    canvasUnavailable: t("errorCanvasUnavailable"),
+    fileReaderFailed: t("errorFileReaderFailed")
+  };
 
   const [result] = await chrome.scripting.executeScript({
     target,
-    func: async (imageUrl) => {
+    func: async (imageUrl, messages) => {
       try {
         const response = await fetch(imageUrl);
         if (!response.ok) {
-          throw new Error(`Page fetch failed with status ${response.status}.`);
+          throw new Error(messages.pageFetchFailed.replace("$STATUS$", String(response.status)));
         }
 
         const blob = await response.blob();
@@ -218,7 +238,7 @@ async function extractImageFromPage(tabId, srcUrl, frameId) {
         const width = image.naturalWidth || image.width;
         const height = image.naturalHeight || image.height;
         if (!width || !height) {
-          throw new Error("The selected image is not fully loaded.");
+          throw new Error(messages.imageNotLoaded);
         }
 
         const canvas = document.createElement("canvas");
@@ -227,7 +247,7 @@ async function extractImageFromPage(tabId, srcUrl, frameId) {
 
         const context = canvas.getContext("2d");
         if (!context) {
-          throw new Error("Canvas is unavailable on this page.");
+          throw new Error(messages.canvasUnavailable);
         }
 
         context.drawImage(image, 0, 0, width, height);
@@ -238,12 +258,12 @@ async function extractImageFromPage(tabId, srcUrl, frameId) {
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result);
-          reader.onerror = () => reject(new Error("FileReader failed."));
+          reader.onerror = () => reject(new Error(messages.fileReaderFailed));
           reader.readAsDataURL(blob);
         });
       }
     },
-    args: [srcUrl]
+    args: [srcUrl, localized]
   });
 
   const dataUrl = result?.result;
@@ -343,7 +363,7 @@ async function processPendingDownload(downloadId) {
     if (pending.action === "copy-path") {
       try {
         if (!finalPath) {
-          throw new Error("Chrome did not expose the final local file path.");
+          throw new Error(t("errorMissingFinalPath"));
         }
 
         await copyTextToClipboard(finalPath);
@@ -354,14 +374,19 @@ async function processPendingDownload(downloadId) {
     }
 
     if (pending.action === "copy-path" && copiedPath) {
-      await notify("Saved and copied", `Saved as ${labelForFormat(pending.format)} and copied file path.`);
+      await notify(
+        t("notifySavedAndCopiedTitle"),
+        t("notifySavedAndCopiedMessage", labelForFormat(pending.format)),
+        "success"
+      );
     } else if (pending.action === "copy-path" && errorMessage) {
       await notify(
-        "Image saved",
-        `Saved as ${labelForFormat(pending.format)}, but copying file path failed: ${errorMessage}`
+        t("notifyImageSavedTitle"),
+        t("notifySavedCopyFailedMessage", [labelForFormat(pending.format), errorMessage]),
+        "error"
       );
     } else {
-      await notify("Image saved", `Saved as ${labelForFormat(pending.format)}.`);
+      await notify(t("notifyImageSavedTitle"), t("notifyImageSavedMessage", labelForFormat(pending.format)), "success");
     }
 
     await appendSaveHistory({
@@ -373,10 +398,10 @@ async function processPendingDownload(downloadId) {
       requestedPath: pending.requestedPath,
       finalPath,
       copiedPath,
-      error: errorMessage,
-      createdAt: pending.createdAt,
-      finishedAt: new Date().toISOString()
-    });
+    error: errorMessage,
+    createdAt: pending.createdAt,
+    finishedAt: new Date().toISOString()
+  });
   } finally {
     processingDownloads.delete(key);
   }
@@ -401,12 +426,12 @@ async function processInterruptedDownload(downloadId) {
     requestedPath: pending.requestedPath,
     finalPath: "",
     copiedPath: false,
-    error: "Download interrupted",
+    error: t("errorDownloadInterrupted"),
     createdAt: pending.createdAt,
     finishedAt: new Date().toISOString()
   });
 
-  await notify("Save failed", "The download was interrupted before the file path could be copied.");
+  await notify(t("notifySaveFailedTitle"), t("notifyInterruptedMessage"), "error");
 }
 
 async function revokePendingObjectUrl(pending) {
@@ -425,9 +450,7 @@ function labelForFormat(format) {
   return FORMATS.find((item) => item.id === format)?.title || format.toUpperCase();
 }
 
-async function notify(title, message) {
-  const status = /failed|error/i.test(title) ? "error" : "success";
-
+async function notify(title, message, status = "success") {
   try {
     await chrome.notifications.create({
       type: "basic",
@@ -470,7 +493,27 @@ function getErrorMessage(error) {
     return error;
   }
 
-  return "Unknown error.";
+  return t("errorUnknown");
+}
+
+function t(messageName, substitutions) {
+  return translate(messageName, substitutions) || messageName;
+}
+
+async function refreshTranslations(settings) {
+  const nextSettings = settings || (await getSettings());
+  if (nextSettings.localeOverride === activeLocaleOverride) {
+    return;
+  }
+
+  const translator = await getTranslator(nextSettings.localeOverride);
+  activeLocaleOverride = nextSettings.localeOverride;
+  activeLocale = translator.locale;
+  translate = translator.t;
+
+  await chrome.action.setTitle({
+    title: t("extActionTitle")
+  });
 }
 
 async function appendActivity(entry) {

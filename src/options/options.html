@@ -114,6 +114,17 @@
         font-weight: 600;
       }
 
+      select {
+        width: 100%;
+        appearance: none;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: #fff;
+        color: var(--ink);
+        padding: 12px 14px;
+        font: inherit;
+      }
+
       input[type="range"] {
         width: 100%;
       }
@@ -258,44 +269,61 @@
   </head>
   <body>
     <main>
-      <h1>Img Save As</h1>
-      <p class="intro">
+      <h1 id="options-heading">Img Save As</h1>
+      <p class="intro" id="options-intro">
         这是一个纯本地执行的图片右键扩展。这里保留第一版必要配置：导出质量、静默保存，以及本地保存历史。
       </p>
 
       <form id="settings-form">
         <section class="panel">
-          <h2>导出质量</h2>
-          <p>PNG 始终无损。JPG 和 WebP 使用下面的质量值，范围 0.10 到 1.00。</p>
+          <h2 id="panel-language-title">语言</h2>
+          <p id="panel-language-body">默认跟随浏览器界面语言，也可以在这里手动指定。</p>
+
+          <div class="field">
+            <label for="locale-override" id="locale-override-label">界面语言</label>
+            <select id="locale-override" name="localeOverride">
+              <option value="auto">Auto</option>
+              <option value="en">English</option>
+              <option value="zh_CN">简体中文</option>
+              <option value="zh_TW">繁體中文</option>
+              <option value="es">Español</option>
+              <option value="de">Deutsch</option>
+            </select>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2 id="panel-quality-title">导出质量</h2>
+          <p id="panel-quality-body">PNG 始终无损。JPG 和 WebP 使用下面的质量值，范围 0.10 到 1.00。</p>
 
           <div class="field-grid two">
             <div class="field">
-              <label for="jpg-quality">JPG 质量 <span class="value" id="jpg-quality-value">0.92</span></label>
+              <label for="jpg-quality" id="jpg-quality-label">JPG 质量 <span class="value" id="jpg-quality-value">0.92</span></label>
               <input id="jpg-quality" name="jpgQuality" type="range" min="0.1" max="1" step="0.01" value="0.92">
             </div>
 
             <div class="field">
-              <label for="webp-quality">WebP 质量 <span class="value" id="webp-quality-value">0.92</span></label>
+              <label for="webp-quality" id="webp-quality-label">WebP 质量 <span class="value" id="webp-quality-value">0.92</span></label>
               <input id="webp-quality" name="webpQuality" type="range" min="0.1" max="1" step="0.01" value="0.92">
             </div>
           </div>
         </section>
 
         <section class="panel">
-          <h2>保存方式</h2>
-          <p>开启后会尽量直接下载，不主动弹出另存为窗口；如果 Chrome 本身开启了“下载前询问保存位置”，浏览器仍可能继续弹窗。文件名第一版保持简单，优先沿用原图名。</p>
+          <h2 id="panel-save-mode-title">保存方式</h2>
+          <p id="panel-save-mode-body">开启后会尽量直接下载，不主动弹出另存为窗口；如果 Chrome 本身开启了“下载前询问保存位置”，浏览器仍可能继续弹窗。文件名第一版保持简单，优先沿用原图名。</p>
 
           <div class="field-grid">
             <label class="toggle" for="silent-save">
               <input id="silent-save" name="silentSave" type="checkbox">
-              <span>开启静默保存</span>
+              <span id="silent-save-label">开启静默保存</span>
             </label>
           </div>
         </section>
 
         <section class="panel">
-          <h2>保存历史</h2>
-          <p>历史记录默认保存在浏览器本地存储中，不依赖远程服务，也不需要 sqlite。点击按钮时再弹出查看。</p>
+          <h2 id="panel-history-title">保存历史</h2>
+          <p id="panel-history-body">历史记录默认保存在浏览器本地存储中，不依赖远程服务，也不需要 sqlite。点击按钮时再弹出查看。</p>
           <div class="actions">
             <button id="open-history-button" type="button">查看历史记录</button>
             <button class="secondary" id="clear-history-button" type="button">清空历史</button>
@@ -303,7 +331,7 @@
         </section>
 
         <div class="actions">
-          <button type="submit">保存设置</button>
+          <button id="save-settings-button" type="submit">保存设置</button>
           <button class="secondary" id="reset-button" type="button">恢复默认</button>
           <div class="status" id="status" aria-live="polite"></div>
         </div>
@@ -313,7 +341,7 @@
     <dialog id="history-dialog">
       <div class="dialog-body">
         <div class="dialog-head">
-          <h2 class="dialog-title">保存历史</h2>
+          <h2 class="dialog-title" id="history-dialog-title">保存历史</h2>
           <button class="secondary" id="close-history-button" type="button">关闭</button>
         </div>
         <div class="list" id="history-list"></div>

@@ -1,7 +1,10 @@
+import { normalizeLocaleOverride } from "./i18n.js";
+
 export const DEFAULT_SETTINGS = {
   jpgQuality: 0.92,
   webpQuality: 0.92,
-  silentSave: false
+  silentSave: false,
+  localeOverride: "auto"
 };
 
 export async function getSettings() {
@@ -19,7 +22,8 @@ function normalizeSettings(rawSettings) {
   return {
     jpgQuality: clampQuality(rawSettings.jpgQuality, DEFAULT_SETTINGS.jpgQuality),
     webpQuality: clampQuality(rawSettings.webpQuality, DEFAULT_SETTINGS.webpQuality),
-    silentSave: Boolean(rawSettings.silentSave)
+    silentSave: Boolean(rawSettings.silentSave),
+    localeOverride: normalizeLocaleOverride(rawSettings.localeOverride)
   };
 }
 

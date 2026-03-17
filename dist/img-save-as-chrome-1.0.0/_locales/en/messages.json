@@ -1,0 +1,213 @@
+{
+  "extName": {
+    "message": "Img Save As"
+  },
+  "extDescription": {
+    "message": "Save web images as PNG, JPG, or WebP locally, with optional copy path and local history."
+  },
+  "extActionTitle": {
+    "message": "Img Save As"
+  },
+  "menuRoot": {
+    "message": "Image Save As"
+  },
+  "menuActionSave": {
+    "message": "Save"
+  },
+  "menuActionCopyPath": {
+    "message": "Save && Copy Path"
+  },
+  "notifySaveFailedTitle": {
+    "message": "Save failed"
+  },
+  "notifySaveFailedNoImageUrl": {
+    "message": "Chrome did not provide an image URL for this item."
+  },
+  "errorNoImageUrl": {
+    "message": "This page did not expose a usable image URL."
+  },
+  "errorUnableReadImage": {
+    "message": "Unable to read this image. Some blob or protected images may be blocked on this page."
+  },
+  "errorPageFetchFailed": {
+    "message": "Page fetch failed with status $STATUS$.",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "errorImageNotLoaded": {
+    "message": "The selected image is not fully loaded."
+  },
+  "errorCanvasUnavailable": {
+    "message": "Canvas is unavailable on this page."
+  },
+  "errorFileReaderFailed": {
+    "message": "FileReader failed."
+  },
+  "errorImageRequestFailed": {
+    "message": "Image request failed with status $STATUS$.",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "errorMissingFinalPath": {
+    "message": "Chrome did not expose the final local file path."
+  },
+  "errorDownloadInterrupted": {
+    "message": "Download interrupted"
+  },
+  "errorUnknown": {
+    "message": "Unknown error."
+  },
+  "notifySavedAndCopiedTitle": {
+    "message": "Saved and copied"
+  },
+  "notifySavedAndCopiedMessage": {
+    "message": "Saved as $FORMAT$ and copied file path.",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifyImageSavedTitle": {
+    "message": "Image saved"
+  },
+  "notifyImageSavedMessage": {
+    "message": "Saved as $FORMAT$.",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifySavedCopyFailedMessage": {
+    "message": "Saved as $FORMAT$, but copying file path failed: $ERROR$",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
+  "notifyInterruptedMessage": {
+    "message": "The download was interrupted before the file path could be copied."
+  },
+  "optionsTitle": {
+    "message": "Img Save As Settings"
+  },
+  "optionsHeading": {
+    "message": "Img Save As"
+  },
+  "optionsIntro": {
+    "message": "A fully local image context-menu extension. This first release keeps only the essentials: export quality, silent save, and local save history."
+  },
+  "panelLanguageTitle": {
+    "message": "Language"
+  },
+  "panelLanguageBody": {
+    "message": "Follow the browser interface language by default, or override it here explicitly."
+  },
+  "labelLanguage": {
+    "message": "Interface language"
+  },
+  "languageOptionAuto": {
+    "message": "Auto (Browser)"
+  },
+  "languageOptionEnglish": {
+    "message": "English"
+  },
+  "languageOptionZhCn": {
+    "message": "Simplified Chinese"
+  },
+  "languageOptionZhTw": {
+    "message": "Traditional Chinese"
+  },
+  "languageOptionSpanish": {
+    "message": "Spanish"
+  },
+  "languageOptionGerman": {
+    "message": "German"
+  },
+  "panelQualityTitle": {
+    "message": "Export Quality"
+  },
+  "panelQualityBody": {
+    "message": "PNG is always lossless. JPG and WebP use the quality values below, from 0.10 to 1.00."
+  },
+  "labelJpgQuality": {
+    "message": "JPG Quality"
+  },
+  "labelWebpQuality": {
+    "message": "WebP Quality"
+  },
+  "panelSaveModeTitle": {
+    "message": "Save Mode"
+  },
+  "panelSaveModeBody": {
+    "message": "When enabled, the extension tries to download directly without opening Save As itself. Chrome may still show a picker if browser download settings are configured to ask where to save each file. Filenames stay simple in v1 and prefer the original image name."
+  },
+  "toggleSilentSave": {
+    "message": "Enable silent save"
+  },
+  "panelHistoryTitle": {
+    "message": "Save History"
+  },
+  "panelHistoryBody": {
+    "message": "History is stored in local browser storage only, with no remote service and no sqlite. Open it on demand from the button below."
+  },
+  "buttonOpenHistory": {
+    "message": "View History"
+  },
+  "buttonClearHistory": {
+    "message": "Clear History"
+  },
+  "buttonSaveSettings": {
+    "message": "Save Settings"
+  },
+  "buttonResetSettings": {
+    "message": "Restore Defaults"
+  },
+  "dialogHistoryTitle": {
+    "message": "Save History"
+  },
+  "buttonClose": {
+    "message": "Close"
+  },
+  "statusSettingsSaved": {
+    "message": "Settings saved."
+  },
+  "statusDefaultsRestored": {
+    "message": "Defaults restored."
+  },
+  "statusHistoryCleared": {
+    "message": "History cleared."
+  },
+  "historyEmpty": {
+    "message": "No save history yet. It will appear here after your first save."
+  },
+  "historyActionCopyPath": {
+    "message": "Path copied"
+  },
+  "historyActionSaveOnly": {
+    "message": "Saved only"
+  },
+  "historyStatusInterrupted": {
+    "message": "Interrupted"
+  },
+  "historyStatusCompleted": {
+    "message": "Completed"
+  },
+  "historyMissingFinalPath": {
+    "message": "Final path unavailable"
+  },
+  "historyUntitledFile": {
+    "message": "Untitled file"
+  }
+}

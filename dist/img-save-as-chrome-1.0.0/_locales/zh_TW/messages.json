@@ -1,0 +1,213 @@
+{
+  "extName": {
+    "message": "Img Save As"
+  },
+  "extDescription": {
+    "message": "將網頁圖片本地保存為 PNG、JPG 或 WebP，並支援複製路徑與本地歷史記錄。"
+  },
+  "extActionTitle": {
+    "message": "Img Save As"
+  },
+  "menuRoot": {
+    "message": "圖片另存為"
+  },
+  "menuActionSave": {
+    "message": "保存"
+  },
+  "menuActionCopyPath": {
+    "message": "保存 && 複製路徑"
+  },
+  "notifySaveFailedTitle": {
+    "message": "保存失敗"
+  },
+  "notifySaveFailedNoImageUrl": {
+    "message": "Chrome 沒有為這個圖片項提供可用的圖片地址。"
+  },
+  "errorNoImageUrl": {
+    "message": "目前頁面沒有暴露可用的圖片地址。"
+  },
+  "errorUnableReadImage": {
+    "message": "無法讀取這張圖片。某些 blob 圖片或受保護圖片可能會被目前頁面攔截。"
+  },
+  "errorPageFetchFailed": {
+    "message": "頁面內請求圖片失敗，狀態碼 $STATUS$。",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "errorImageNotLoaded": {
+    "message": "選中的圖片還沒有完全載入。"
+  },
+  "errorCanvasUnavailable": {
+    "message": "目前頁面無法使用 Canvas。"
+  },
+  "errorFileReaderFailed": {
+    "message": "FileReader 讀取失敗。"
+  },
+  "errorImageRequestFailed": {
+    "message": "請求圖片失敗，狀態碼 $STATUS$。",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "errorMissingFinalPath": {
+    "message": "Chrome 沒有返回最終的本地檔案路徑。"
+  },
+  "errorDownloadInterrupted": {
+    "message": "下載已中斷"
+  },
+  "errorUnknown": {
+    "message": "未知錯誤。"
+  },
+  "notifySavedAndCopiedTitle": {
+    "message": "已保存並複製"
+  },
+  "notifySavedAndCopiedMessage": {
+    "message": "已保存為 $FORMAT$，並複製檔案路徑。",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifyImageSavedTitle": {
+    "message": "圖片已保存"
+  },
+  "notifyImageSavedMessage": {
+    "message": "已保存為 $FORMAT$。",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifySavedCopyFailedMessage": {
+    "message": "已保存為 $FORMAT$，但複製檔案路徑失敗：$ERROR$",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
+  "notifyInterruptedMessage": {
+    "message": "下載在複製檔案路徑前被中斷。"
+  },
+  "optionsTitle": {
+    "message": "Img Save As 設定"
+  },
+  "optionsHeading": {
+    "message": "Img Save As"
+  },
+  "optionsIntro": {
+    "message": "這是一個純本地執行的圖片右鍵擴充功能。這裡保留第一版必要配置：導出品質、靜默保存，以及本地保存歷史。"
+  },
+  "panelLanguageTitle": {
+    "message": "語言"
+  },
+  "panelLanguageBody": {
+    "message": "預設跟隨瀏覽器介面語言，也可以在這裡手動指定。"
+  },
+  "labelLanguage": {
+    "message": "介面語言"
+  },
+  "languageOptionAuto": {
+    "message": "自動（跟隨瀏覽器）"
+  },
+  "languageOptionEnglish": {
+    "message": "English"
+  },
+  "languageOptionZhCn": {
+    "message": "简体中文"
+  },
+  "languageOptionZhTw": {
+    "message": "繁體中文"
+  },
+  "languageOptionSpanish": {
+    "message": "Español"
+  },
+  "languageOptionGerman": {
+    "message": "Deutsch"
+  },
+  "panelQualityTitle": {
+    "message": "導出品質"
+  },
+  "panelQualityBody": {
+    "message": "PNG 始終無損。JPG 和 WebP 使用下面的品質值，範圍 0.10 到 1.00。"
+  },
+  "labelJpgQuality": {
+    "message": "JPG 品質"
+  },
+  "labelWebpQuality": {
+    "message": "WebP 品質"
+  },
+  "panelSaveModeTitle": {
+    "message": "保存方式"
+  },
+  "panelSaveModeBody": {
+    "message": "開啟後會盡量直接下載，不主動彈出另存為視窗；如果 Chrome 本身開啟了「下載前詢問保存位置」，瀏覽器仍可能繼續彈窗。檔名第一版保持簡單，優先沿用原圖名。"
+  },
+  "toggleSilentSave": {
+    "message": "開啟靜默保存"
+  },
+  "panelHistoryTitle": {
+    "message": "保存歷史"
+  },
+  "panelHistoryBody": {
+    "message": "歷史記錄預設保存在瀏覽器本地儲存中，不依賴遠端服務，也不需要 sqlite。點擊按鈕時再彈出查看。"
+  },
+  "buttonOpenHistory": {
+    "message": "查看歷史記錄"
+  },
+  "buttonClearHistory": {
+    "message": "清空歷史"
+  },
+  "buttonSaveSettings": {
+    "message": "保存設定"
+  },
+  "buttonResetSettings": {
+    "message": "恢復預設"
+  },
+  "dialogHistoryTitle": {
+    "message": "保存歷史"
+  },
+  "buttonClose": {
+    "message": "關閉"
+  },
+  "statusSettingsSaved": {
+    "message": "設定已保存。"
+  },
+  "statusDefaultsRestored": {
+    "message": "已恢復預設設定。"
+  },
+  "statusHistoryCleared": {
+    "message": "歷史記錄已清空。"
+  },
+  "historyEmpty": {
+    "message": "還沒有保存歷史。執行一次保存後會顯示在這裡。"
+  },
+  "historyActionCopyPath": {
+    "message": "已複製路徑"
+  },
+  "historyActionSaveOnly": {
+    "message": "僅保存"
+  },
+  "historyStatusInterrupted": {
+    "message": "中斷"
+  },
+  "historyStatusCompleted": {
+    "message": "完成"
+  },
+  "historyMissingFinalPath": {
+    "message": "未拿到最終路徑"
+  },
+  "historyUntitledFile": {
+    "message": "未命名檔案"
+  }
+}

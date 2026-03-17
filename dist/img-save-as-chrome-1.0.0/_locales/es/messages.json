@@ -1,0 +1,213 @@
+{
+  "extName": {
+    "message": "Img Save As"
+  },
+  "extDescription": {
+    "message": "Guarda imágenes web localmente como PNG, JPG o WebP, con copia opcional de la ruta e historial local."
+  },
+  "extActionTitle": {
+    "message": "Img Save As"
+  },
+  "menuRoot": {
+    "message": "Guardar imagen como"
+  },
+  "menuActionSave": {
+    "message": "Guardar"
+  },
+  "menuActionCopyPath": {
+    "message": "Guardar && Copiar ruta"
+  },
+  "notifySaveFailedTitle": {
+    "message": "Error al guardar"
+  },
+  "notifySaveFailedNoImageUrl": {
+    "message": "Chrome no proporcionó una URL de imagen para este elemento."
+  },
+  "errorNoImageUrl": {
+    "message": "Esta página no expuso una URL de imagen utilizable."
+  },
+  "errorUnableReadImage": {
+    "message": "No se pudo leer esta imagen. Algunas imágenes blob o protegidas pueden estar bloqueadas en esta página."
+  },
+  "errorPageFetchFailed": {
+    "message": "La solicitud de la página falló con el estado $STATUS$.",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "errorImageNotLoaded": {
+    "message": "La imagen seleccionada no se ha cargado por completo."
+  },
+  "errorCanvasUnavailable": {
+    "message": "Canvas no está disponible en esta página."
+  },
+  "errorFileReaderFailed": {
+    "message": "FileReader falló."
+  },
+  "errorImageRequestFailed": {
+    "message": "La solicitud de imagen falló con el estado $STATUS$.",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "errorMissingFinalPath": {
+    "message": "Chrome no expuso la ruta local final del archivo."
+  },
+  "errorDownloadInterrupted": {
+    "message": "Descarga interrumpida"
+  },
+  "errorUnknown": {
+    "message": "Error desconocido."
+  },
+  "notifySavedAndCopiedTitle": {
+    "message": "Guardado y copiado"
+  },
+  "notifySavedAndCopiedMessage": {
+    "message": "Guardado como $FORMAT$ y ruta del archivo copiada.",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifyImageSavedTitle": {
+    "message": "Imagen guardada"
+  },
+  "notifyImageSavedMessage": {
+    "message": "Guardado como $FORMAT$.",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifySavedCopyFailedMessage": {
+    "message": "Guardado como $FORMAT$, pero no se pudo copiar la ruta del archivo: $ERROR$",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
+  "notifyInterruptedMessage": {
+    "message": "La descarga se interrumpió antes de poder copiar la ruta del archivo."
+  },
+  "optionsTitle": {
+    "message": "Configuración de Img Save As"
+  },
+  "optionsHeading": {
+    "message": "Img Save As"
+  },
+  "optionsIntro": {
+    "message": "Una extensión de menú contextual para imágenes que funciona totalmente en local. Esta primera versión mantiene solo lo esencial: calidad de exportación, guardado silencioso e historial local."
+  },
+  "panelLanguageTitle": {
+    "message": "Idioma"
+  },
+  "panelLanguageBody": {
+    "message": "Por defecto sigue el idioma de la interfaz del navegador, pero puedes forzarlo aquí."
+  },
+  "labelLanguage": {
+    "message": "Idioma de la interfaz"
+  },
+  "languageOptionAuto": {
+    "message": "Automático (navegador)"
+  },
+  "languageOptionEnglish": {
+    "message": "English"
+  },
+  "languageOptionZhCn": {
+    "message": "简体中文"
+  },
+  "languageOptionZhTw": {
+    "message": "繁體中文"
+  },
+  "languageOptionSpanish": {
+    "message": "Español"
+  },
+  "languageOptionGerman": {
+    "message": "Deutsch"
+  },
+  "panelQualityTitle": {
+    "message": "Calidad de exportación"
+  },
+  "panelQualityBody": {
+    "message": "PNG siempre es sin pérdida. JPG y WebP usan los valores de calidad siguientes, de 0.10 a 1.00."
+  },
+  "labelJpgQuality": {
+    "message": "Calidad JPG"
+  },
+  "labelWebpQuality": {
+    "message": "Calidad WebP"
+  },
+  "panelSaveModeTitle": {
+    "message": "Modo de guardado"
+  },
+  "panelSaveModeBody": {
+    "message": "Cuando está activado, la extensión intenta descargar directamente sin abrir por sí misma el cuadro de Guardar como. Chrome aún puede mostrar un selector si la configuración del navegador está establecida para preguntar dónde guardar cada archivo. Los nombres de archivo siguen siendo simples en la v1 y priorizan el nombre original de la imagen."
+  },
+  "toggleSilentSave": {
+    "message": "Activar guardado silencioso"
+  },
+  "panelHistoryTitle": {
+    "message": "Historial de guardado"
+  },
+  "panelHistoryBody": {
+    "message": "El historial se almacena solo en el almacenamiento local del navegador, sin servicio remoto ni sqlite. Ábrelo cuando lo necesites con el botón de abajo."
+  },
+  "buttonOpenHistory": {
+    "message": "Ver historial"
+  },
+  "buttonClearHistory": {
+    "message": "Borrar historial"
+  },
+  "buttonSaveSettings": {
+    "message": "Guardar configuración"
+  },
+  "buttonResetSettings": {
+    "message": "Restaurar valores predeterminados"
+  },
+  "dialogHistoryTitle": {
+    "message": "Historial de guardado"
+  },
+  "buttonClose": {
+    "message": "Cerrar"
+  },
+  "statusSettingsSaved": {
+    "message": "Configuración guardada."
+  },
+  "statusDefaultsRestored": {
+    "message": "Valores predeterminados restaurados."
+  },
+  "statusHistoryCleared": {
+    "message": "Historial borrado."
+  },
+  "historyEmpty": {
+    "message": "Todavía no hay historial de guardado. Aparecerá aquí después de la primera vez que guardes."
+  },
+  "historyActionCopyPath": {
+    "message": "Ruta copiada"
+  },
+  "historyActionSaveOnly": {
+    "message": "Solo guardado"
+  },
+  "historyStatusInterrupted": {
+    "message": "Interrumpido"
+  },
+  "historyStatusCompleted": {
+    "message": "Completado"
+  },
+  "historyMissingFinalPath": {
+    "message": "Ruta final no disponible"
+  },
+  "historyUntitledFile": {
+    "message": "Archivo sin título"
+  }
+}

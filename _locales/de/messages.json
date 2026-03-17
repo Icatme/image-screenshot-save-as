@@ -1,0 +1,213 @@
+{
+  "extName": {
+    "message": "Img Save As"
+  },
+  "extDescription": {
+    "message": "Speichert Webbilder lokal als PNG, JPG oder WebP, mit optionalem Pfadkopieren und lokalem Verlauf."
+  },
+  "extActionTitle": {
+    "message": "Img Save As"
+  },
+  "menuRoot": {
+    "message": "Bild speichern unter"
+  },
+  "menuActionSave": {
+    "message": "Speichern"
+  },
+  "menuActionCopyPath": {
+    "message": "Speichern && Pfad kopieren"
+  },
+  "notifySaveFailedTitle": {
+    "message": "Speichern fehlgeschlagen"
+  },
+  "notifySaveFailedNoImageUrl": {
+    "message": "Chrome hat für dieses Element keine Bild-URL bereitgestellt."
+  },
+  "errorNoImageUrl": {
+    "message": "Diese Seite hat keine verwendbare Bild-URL bereitgestellt."
+  },
+  "errorUnableReadImage": {
+    "message": "Dieses Bild konnte nicht gelesen werden. Einige Blob- oder geschützte Bilder werden auf dieser Seite möglicherweise blockiert."
+  },
+  "errorPageFetchFailed": {
+    "message": "Seitenanfrage mit Status $STATUS$ fehlgeschlagen.",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "errorImageNotLoaded": {
+    "message": "Das ausgewählte Bild ist noch nicht vollständig geladen."
+  },
+  "errorCanvasUnavailable": {
+    "message": "Canvas ist auf dieser Seite nicht verfügbar."
+  },
+  "errorFileReaderFailed": {
+    "message": "FileReader ist fehlgeschlagen."
+  },
+  "errorImageRequestFailed": {
+    "message": "Bildanfrage mit Status $STATUS$ fehlgeschlagen.",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "errorMissingFinalPath": {
+    "message": "Chrome hat den endgültigen lokalen Dateipfad nicht bereitgestellt."
+  },
+  "errorDownloadInterrupted": {
+    "message": "Download unterbrochen"
+  },
+  "errorUnknown": {
+    "message": "Unbekannter Fehler."
+  },
+  "notifySavedAndCopiedTitle": {
+    "message": "Gespeichert und kopiert"
+  },
+  "notifySavedAndCopiedMessage": {
+    "message": "Als $FORMAT$ gespeichert und Dateipfad kopiert.",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifyImageSavedTitle": {
+    "message": "Bild gespeichert"
+  },
+  "notifyImageSavedMessage": {
+    "message": "Als $FORMAT$ gespeichert.",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifySavedCopyFailedMessage": {
+    "message": "Als $FORMAT$ gespeichert, aber der Dateipfad konnte nicht kopiert werden: $ERROR$",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
+  "notifyInterruptedMessage": {
+    "message": "Der Download wurde unterbrochen, bevor der Dateipfad kopiert werden konnte."
+  },
+  "optionsTitle": {
+    "message": "Img Save As Einstellungen"
+  },
+  "optionsHeading": {
+    "message": "Img Save As"
+  },
+  "optionsIntro": {
+    "message": "Eine vollständig lokal arbeitende Bild-Kontextmenü-Erweiterung. Diese erste Version enthält nur das Nötigste: Exportqualität, stilles Speichern und lokalen Speicherverlauf."
+  },
+  "panelLanguageTitle": {
+    "message": "Sprache"
+  },
+  "panelLanguageBody": {
+    "message": "Standardmäßig folgt sie der Browsersprache, kann hier aber explizit überschrieben werden."
+  },
+  "labelLanguage": {
+    "message": "Oberflächensprache"
+  },
+  "languageOptionAuto": {
+    "message": "Automatisch (Browser)"
+  },
+  "languageOptionEnglish": {
+    "message": "English"
+  },
+  "languageOptionZhCn": {
+    "message": "简体中文"
+  },
+  "languageOptionZhTw": {
+    "message": "繁體中文"
+  },
+  "languageOptionSpanish": {
+    "message": "Español"
+  },
+  "languageOptionGerman": {
+    "message": "Deutsch"
+  },
+  "panelQualityTitle": {
+    "message": "Exportqualität"
+  },
+  "panelQualityBody": {
+    "message": "PNG ist immer verlustfrei. JPG und WebP verwenden die unten stehenden Qualitätswerte von 0,10 bis 1,00."
+  },
+  "labelJpgQuality": {
+    "message": "JPG-Qualität"
+  },
+  "labelWebpQuality": {
+    "message": "WebP-Qualität"
+  },
+  "panelSaveModeTitle": {
+    "message": "Speichermodus"
+  },
+  "panelSaveModeBody": {
+    "message": "Wenn aktiviert, versucht die Erweiterung direkt herunterzuladen, ohne selbst den Dialog Speichern unter zu öffnen. Chrome kann dennoch einen Auswahldialog anzeigen, wenn der Browser so eingestellt ist, dass für jede Datei nach dem Speicherort gefragt wird. Dateinamen bleiben in v1 bewusst einfach und bevorzugen den ursprünglichen Bildnamen."
+  },
+  "toggleSilentSave": {
+    "message": "Stilles Speichern aktivieren"
+  },
+  "panelHistoryTitle": {
+    "message": "Speicherverlauf"
+  },
+  "panelHistoryBody": {
+    "message": "Der Verlauf wird nur im lokalen Browserspeicher abgelegt, ohne Remote-Dienst und ohne sqlite. Über die Schaltfläche unten kann er bei Bedarf geöffnet werden."
+  },
+  "buttonOpenHistory": {
+    "message": "Verlauf anzeigen"
+  },
+  "buttonClearHistory": {
+    "message": "Verlauf löschen"
+  },
+  "buttonSaveSettings": {
+    "message": "Einstellungen speichern"
+  },
+  "buttonResetSettings": {
+    "message": "Standards wiederherstellen"
+  },
+  "dialogHistoryTitle": {
+    "message": "Speicherverlauf"
+  },
+  "buttonClose": {
+    "message": "Schließen"
+  },
+  "statusSettingsSaved": {
+    "message": "Einstellungen gespeichert."
+  },
+  "statusDefaultsRestored": {
+    "message": "Standardeinstellungen wiederhergestellt."
+  },
+  "statusHistoryCleared": {
+    "message": "Verlauf gelöscht."
+  },
+  "historyEmpty": {
+    "message": "Noch kein Speicherverlauf vorhanden. Er erscheint hier nach dem ersten Speichern."
+  },
+  "historyActionCopyPath": {
+    "message": "Pfad kopiert"
+  },
+  "historyActionSaveOnly": {
+    "message": "Nur gespeichert"
+  },
+  "historyStatusInterrupted": {
+    "message": "Unterbrochen"
+  },
+  "historyStatusCompleted": {
+    "message": "Abgeschlossen"
+  },
+  "historyMissingFinalPath": {
+    "message": "Endgültiger Pfad nicht verfügbar"
+  },
+  "historyUntitledFile": {
+    "message": "Unbenannte Datei"
+  }
+}
