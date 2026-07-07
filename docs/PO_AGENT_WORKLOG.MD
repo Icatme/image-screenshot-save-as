@@ -11,3 +11,4 @@
 - Added `file:///*` host permission plus runtime checks for Chrome's file URL access toggle, and routed local image reads through page extraction instead of background `fetch(file://...)`; updated docs, locales, `dist`, and the ZIP.
 - Renamed the public extension identity from `Img Save As` to `Image & Screenshot Save As` so the displayed name covers both image conversion saves and page screenshot saves; internal menu IDs were left unchanged.
 - Added an MIT license and README license section for public open-source publication.
+- Created the public GitHub repository `Icatme/image-screenshot-save-as` and pushed the project on the `main` branch.
