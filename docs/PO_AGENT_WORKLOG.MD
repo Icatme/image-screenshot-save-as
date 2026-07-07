@@ -12,3 +12,4 @@
 - Renamed the public extension identity from `Img Save As` to `Image & Screenshot Save As` so the displayed name covers both image conversion saves and page screenshot saves; internal menu IDs were left unchanged.
 - Added an MIT license and README license section for public open-source publication.
 - Created the public GitHub repository `Icatme/image-screenshot-save-as` and pushed the project on the `main` branch.
+- Prepared version `1.5` for GitHub release, renamed the packaged artifact to `image-screenshot-save-as-chrome-1.5.zip`, and published release tag `v1.5`.
