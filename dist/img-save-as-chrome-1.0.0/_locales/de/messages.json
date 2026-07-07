@@ -1,12 +1,12 @@
 {
   "extName": {
-    "message": "Img Save As"
+    "message": "Bild & Screenshot speichern als"
   },
   "extDescription": {
-    "message": "Speichert Webbilder lokal als PNG, JPG oder WebP, mit optionalem Pfadkopieren und lokalem Verlauf."
+    "message": "Speichert Webbilder und Seiten-Screenshots lokal als PNG, JPG oder WebP, mit optionalem Pfadkopieren und lokalem Verlauf."
   },
   "extActionTitle": {
-    "message": "Img Save As"
+    "message": "Bild & Screenshot speichern als"
   },
   "menuRoot": {
     "message": "Bild speichern unter"
@@ -16,6 +16,15 @@
   },
   "menuActionCopyPath": {
     "message": "Speichern && Pfad kopieren"
+  },
+  "menuScreenshotRoot": {
+    "message": "Seiten-Screenshot speichern unter"
+  },
+  "menuScreenshotVisible": {
+    "message": "Sichtbare Seite"
+  },
+  "menuScreenshotFullPage": {
+    "message": "Ganze Seite"
   },
   "notifySaveFailedTitle": {
     "message": "Speichern fehlgeschlagen"
@@ -28,6 +37,12 @@
   },
   "errorUnableReadImage": {
     "message": "Dieses Bild konnte nicht gelesen werden. Einige Blob- oder geschützte Bilder werden auf dieser Seite möglicherweise blockiert."
+  },
+  "errorUnableReadFileImage": {
+    "message": "Dieses lokale Bild konnte nicht gelesen werden. Stelle sicher, dass das Bild auf der Seite sichtbar ist und der Erweiterung Zugriff auf Datei-URLs erlaubt ist."
+  },
+  "errorFileUrlAccessRequired": {
+    "message": "Der Zugriff auf lokale Dateien ist deaktiviert. Öffne die Detailseite der Erweiterung und aktiviere Zugriff auf Datei-URLs erlauben."
   },
   "errorPageFetchFailed": {
     "message": "Seitenanfrage mit Status $STATUS$ fehlgeschlagen.",
@@ -63,6 +78,35 @@
   "errorUnknown": {
     "message": "Unbekannter Fehler."
   },
+  "errorScreenshotNoTab": {
+    "message": "Chrome hat keinen verwendbaren Tab für diesen Screenshot bereitgestellt."
+  },
+  "errorScreenshotAlreadyRunning": {
+    "message": "In diesem Tab läuft bereits ein Screenshot."
+  },
+  "errorScreenshotMetricsUnavailable": {
+    "message": "Die Screenshot-Größe dieser Seite konnte nicht gelesen werden."
+  },
+  "errorScreenshotTabChanged": {
+    "message": "Der Screenshot wurde gestoppt, weil sich der aktive Tab geändert hat."
+  },
+  "errorScreenshotEmpty": {
+    "message": "Diese Seite hat einen leeren Screenshot erzeugt."
+  },
+  "errorScreenshotTooLargeEdge": {
+    "message": "Diese Seite ist zu groß für ein einzelnes Bild. Maximale Kante: $EDGE$px.",
+    "placeholders": {
+      "edge": {
+        "content": "$1"
+      }
+    }
+  },
+  "errorScreenshotTooLargePixels": {
+    "message": "Diese Seite ist zu groß, um sie sicher als einzelnes Bild zu erfassen."
+  },
+  "errorScreenshotScrollStalled": {
+    "message": "Die Seite konnte nicht weit genug scrollen, um den langen Screenshot abzuschließen."
+  },
   "notifySavedAndCopiedTitle": {
     "message": "Gespeichert und kopiert"
   },
@@ -85,6 +129,17 @@
       }
     }
   },
+  "notifyScreenshotSavedTitle": {
+    "message": "Screenshot gespeichert"
+  },
+  "notifyScreenshotSavedMessage": {
+    "message": "Screenshot als $FORMAT$ gespeichert.",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
   "notifySavedCopyFailedMessage": {
     "message": "Als $FORMAT$ gespeichert, aber der Dateipfad konnte nicht kopiert werden: $ERROR$",
     "placeholders": {
@@ -100,13 +155,40 @@
     "message": "Der Download wurde unterbrochen, bevor der Dateipfad kopiert werden konnte."
   },
   "optionsTitle": {
-    "message": "Img Save As Einstellungen"
+    "message": "Einstellungen für Bild & Screenshot speichern als"
   },
   "optionsHeading": {
-    "message": "Img Save As"
+    "message": "Bild & Screenshot speichern als"
   },
   "optionsIntro": {
-    "message": "Eine vollständig lokal arbeitende Bild-Kontextmenü-Erweiterung. Diese erste Version enthält nur das Nötigste: Exportqualität, stilles Speichern und lokalen Speicherverlauf."
+    "message": "Eine vollständig lokale Erweiterung zum Speichern von Bildern und Seiten-Screenshots aus dem Kontextmenü. Diese Version enthält das Nötigste: Exportqualität, stilles Speichern und lokalen Speicherverlauf."
+  },
+  "heroEyebrow": {
+    "message": "Lokales Werkzeug"
+  },
+  "heroTilePng": {
+    "message": "Verlustfrei zuerst"
+  },
+  "heroTilePath": {
+    "message": "Pfad nach dem Speichern"
+  },
+  "heroTileLocal": {
+    "message": "Kein Remote-Code"
+  },
+  "heroNote": {
+    "message": "Bild oder Seite rechtsklicken, Format wählen, schnell speichern. Den Pfad nur dann kopieren, wenn du ihn brauchst."
+  },
+  "sectionTagInterface": {
+    "message": "Oberfläche"
+  },
+  "sectionTagOutput": {
+    "message": "Ausgabe"
+  },
+  "sectionTagBehavior": {
+    "message": "Verhalten"
+  },
+  "sectionTagRecords": {
+    "message": "Verlauf"
   },
   "panelLanguageTitle": {
     "message": "Sprache"
@@ -151,7 +233,7 @@
     "message": "Speichermodus"
   },
   "panelSaveModeBody": {
-    "message": "Wenn aktiviert, versucht die Erweiterung direkt herunterzuladen, ohne selbst den Dialog Speichern unter zu öffnen. Chrome kann dennoch einen Auswahldialog anzeigen, wenn der Browser so eingestellt ist, dass für jede Datei nach dem Speicherort gefragt wird. Dateinamen bleiben in v1 bewusst einfach und bevorzugen den ursprünglichen Bildnamen."
+    "message": "Wenn aktiviert, speichert die Erweiterung ohne Rückfrage. Dateien werden im Standardordner Downloads des Browsers gespeichert."
   },
   "toggleSilentSave": {
     "message": "Stilles Speichern aktivieren"

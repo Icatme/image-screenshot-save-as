@@ -1,12 +1,12 @@
 {
   "extName": {
-    "message": "Img Save As"
+    "message": "Image & Screenshot Save As"
   },
   "extDescription": {
-    "message": "Save web images as PNG, JPG, or WebP locally, with optional copy path and local history."
+    "message": "Save web images and page screenshots as PNG, JPG, or WebP locally, with optional copy path and local history."
   },
   "extActionTitle": {
-    "message": "Img Save As"
+    "message": "Image & Screenshot Save As"
   },
   "menuRoot": {
     "message": "Image Save As"
@@ -16,6 +16,15 @@
   },
   "menuActionCopyPath": {
     "message": "Save && Copy Path"
+  },
+  "menuScreenshotRoot": {
+    "message": "Page Screenshot As"
+  },
+  "menuScreenshotVisible": {
+    "message": "Visible Page"
+  },
+  "menuScreenshotFullPage": {
+    "message": "Full Page"
   },
   "notifySaveFailedTitle": {
     "message": "Save failed"
@@ -28,6 +37,12 @@
   },
   "errorUnableReadImage": {
     "message": "Unable to read this image. Some blob or protected images may be blocked on this page."
+  },
+  "errorUnableReadFileImage": {
+    "message": "Unable to read this local image. Make sure the image is visible on the page and file URL access is allowed for this extension."
+  },
+  "errorFileUrlAccessRequired": {
+    "message": "Local file access is disabled. Open the extension details page and enable Allow access to file URLs."
   },
   "errorPageFetchFailed": {
     "message": "Page fetch failed with status $STATUS$.",
@@ -63,6 +78,35 @@
   "errorUnknown": {
     "message": "Unknown error."
   },
+  "errorScreenshotNoTab": {
+    "message": "Chrome did not provide a usable tab for this screenshot."
+  },
+  "errorScreenshotAlreadyRunning": {
+    "message": "A screenshot is already running on this tab."
+  },
+  "errorScreenshotMetricsUnavailable": {
+    "message": "Unable to read this page's screenshot size."
+  },
+  "errorScreenshotTabChanged": {
+    "message": "Screenshot stopped because the active tab changed."
+  },
+  "errorScreenshotEmpty": {
+    "message": "This page produced an empty screenshot."
+  },
+  "errorScreenshotTooLargeEdge": {
+    "message": "This page is too large for one image. Max edge is $EDGE$px.",
+    "placeholders": {
+      "edge": {
+        "content": "$1"
+      }
+    }
+  },
+  "errorScreenshotTooLargePixels": {
+    "message": "This page is too large to capture as one image safely."
+  },
+  "errorScreenshotScrollStalled": {
+    "message": "The page could not scroll far enough to finish the long screenshot."
+  },
   "notifySavedAndCopiedTitle": {
     "message": "Saved and copied"
   },
@@ -85,6 +129,17 @@
       }
     }
   },
+  "notifyScreenshotSavedTitle": {
+    "message": "Screenshot saved"
+  },
+  "notifyScreenshotSavedMessage": {
+    "message": "Screenshot saved as $FORMAT$.",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
   "notifySavedCopyFailedMessage": {
     "message": "Saved as $FORMAT$, but copying file path failed: $ERROR$",
     "placeholders": {
@@ -100,13 +155,40 @@
     "message": "The download was interrupted before the file path could be copied."
   },
   "optionsTitle": {
-    "message": "Img Save As Settings"
+    "message": "Image & Screenshot Save As Settings"
   },
   "optionsHeading": {
-    "message": "Img Save As"
+    "message": "Image & Screenshot Save As"
   },
   "optionsIntro": {
-    "message": "A fully local image context-menu extension. This first release keeps only the essentials: export quality, silent save, and local save history."
+    "message": "A fully local image and page screenshot save-as extension. This release keeps the essentials: export quality, silent save, and local save history."
+  },
+  "heroEyebrow": {
+    "message": "Local Utility"
+  },
+  "heroTilePng": {
+    "message": "Lossless First"
+  },
+  "heroTilePath": {
+    "message": "Copy After Save"
+  },
+  "heroTileLocal": {
+    "message": "No Remote Code"
+  },
+  "heroNote": {
+    "message": "Right-click an image or page. Pick a format. Save fast. Keep the path when needed."
+  },
+  "sectionTagInterface": {
+    "message": "Interface"
+  },
+  "sectionTagOutput": {
+    "message": "Output"
+  },
+  "sectionTagBehavior": {
+    "message": "Behavior"
+  },
+  "sectionTagRecords": {
+    "message": "Records"
   },
   "panelLanguageTitle": {
     "message": "Language"
@@ -151,7 +233,7 @@
     "message": "Save Mode"
   },
   "panelSaveModeBody": {
-    "message": "When enabled, the extension tries to download directly without opening Save As itself. Chrome may still show a picker if browser download settings are configured to ask where to save each file. Filenames stay simple in v1 and prefer the original image name."
+    "message": "When enabled, the extension saves silently. Files go to the browser's default Downloads folder."
   },
   "toggleSilentSave": {
     "message": "Enable silent save"

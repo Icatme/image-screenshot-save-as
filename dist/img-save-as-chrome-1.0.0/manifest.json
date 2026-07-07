@@ -9,14 +9,15 @@
     "contextMenus",
     "downloads",
     "storage",
-    "notifications",
     "offscreen",
     "clipboardWrite",
-    "scripting"
+    "scripting",
+    "activeTab"
   ],
   "host_permissions": [
     "http://*/*",
-    "https://*/*"
+    "https://*/*",
+    "file:///*"
   ],
   "background": {
     "service_worker": "src/background/service-worker.js",

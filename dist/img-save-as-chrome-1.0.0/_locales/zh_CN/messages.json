@@ -1,12 +1,12 @@
 {
   "extName": {
-    "message": "Img Save As"
+    "message": "图片与截图另存为"
   },
   "extDescription": {
-    "message": "将网页图片本地保存为 PNG、JPG 或 WebP，并支持复制路径与本地历史记录。"
+    "message": "将网页图片和网页截图本地保存为 PNG、JPG 或 WebP，并支持复制路径与本地历史记录。"
   },
   "extActionTitle": {
-    "message": "Img Save As"
+    "message": "图片与截图另存为"
   },
   "menuRoot": {
     "message": "图片另存为"
@@ -16,6 +16,15 @@
   },
   "menuActionCopyPath": {
     "message": "保存 && 复制路径"
+  },
+  "menuScreenshotRoot": {
+    "message": "网页截图另存为"
+  },
+  "menuScreenshotVisible": {
+    "message": "可视区域"
+  },
+  "menuScreenshotFullPage": {
+    "message": "整页长截图"
   },
   "notifySaveFailedTitle": {
     "message": "保存失败"
@@ -28,6 +37,12 @@
   },
   "errorUnableReadImage": {
     "message": "无法读取这张图片。某些 blob 图片或受保护图片可能会被当前页面拦截。"
+  },
+  "errorUnableReadFileImage": {
+    "message": "无法读取这张本地图片。请确认图片已在页面中正常显示，并且扩展已允许访问文件网址。"
+  },
+  "errorFileUrlAccessRequired": {
+    "message": "本地文件访问未开启。请打开扩展详情页，启用“允许访问文件网址”。"
   },
   "errorPageFetchFailed": {
     "message": "页面内请求图片失败，状态码 $STATUS$。",
@@ -63,6 +78,35 @@
   "errorUnknown": {
     "message": "未知错误。"
   },
+  "errorScreenshotNoTab": {
+    "message": "Chrome 没有为这次截图提供可用的标签页。"
+  },
+  "errorScreenshotAlreadyRunning": {
+    "message": "当前标签页已有截图任务正在执行。"
+  },
+  "errorScreenshotMetricsUnavailable": {
+    "message": "无法读取当前页面的截图尺寸。"
+  },
+  "errorScreenshotTabChanged": {
+    "message": "活动标签页已变化，截图已停止。"
+  },
+  "errorScreenshotEmpty": {
+    "message": "当前页面生成了空截图。"
+  },
+  "errorScreenshotTooLargeEdge": {
+    "message": "当前页面过大，无法保存为单张图片。最大边长为 $EDGE$px。",
+    "placeholders": {
+      "edge": {
+        "content": "$1"
+      }
+    }
+  },
+  "errorScreenshotTooLargePixels": {
+    "message": "当前页面过大，无法安全地保存为单张截图。"
+  },
+  "errorScreenshotScrollStalled": {
+    "message": "页面无法继续滚动，长截图未能完成。"
+  },
   "notifySavedAndCopiedTitle": {
     "message": "已保存并复制"
   },
@@ -85,6 +129,17 @@
       }
     }
   },
+  "notifyScreenshotSavedTitle": {
+    "message": "截图已保存"
+  },
+  "notifyScreenshotSavedMessage": {
+    "message": "截图已保存为 $FORMAT$。",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
   "notifySavedCopyFailedMessage": {
     "message": "已保存为 $FORMAT$，但复制文件路径失败：$ERROR$",
     "placeholders": {
@@ -100,13 +155,40 @@
     "message": "下载在复制文件路径前被中断。"
   },
   "optionsTitle": {
-    "message": "Img Save As 设置"
+    "message": "图片与截图另存为设置"
   },
   "optionsHeading": {
-    "message": "Img Save As"
+    "message": "图片与截图另存为"
   },
   "optionsIntro": {
-    "message": "这是一个纯本地执行的图片右键扩展。这里保留第一版必要配置：导出质量、静默保存，以及本地保存历史。"
+    "message": "这是一个纯本地执行的图片与网页截图另存为扩展。这里保留必要配置：导出质量、静默保存，以及本地保存历史。"
+  },
+  "heroEyebrow": {
+    "message": "本地工具"
+  },
+  "heroTilePng": {
+    "message": "优先无损"
+  },
+  "heroTilePath": {
+    "message": "保存后复制"
+  },
+  "heroTileLocal": {
+    "message": "无远程代码"
+  },
+  "heroNote": {
+    "message": "右键图片或页面，选择格式，快速保存；需要时再顺手复制路径。"
+  },
+  "sectionTagInterface": {
+    "message": "界面"
+  },
+  "sectionTagOutput": {
+    "message": "导出"
+  },
+  "sectionTagBehavior": {
+    "message": "行为"
+  },
+  "sectionTagRecords": {
+    "message": "记录"
   },
   "panelLanguageTitle": {
     "message": "语言"
@@ -151,7 +233,7 @@
     "message": "保存方式"
   },
   "panelSaveModeBody": {
-    "message": "开启后会尽量直接下载，不主动弹出另存为窗口；如果 Chrome 本身开启了“下载前询问保存位置”，浏览器仍可能继续弹窗。文件名第一版保持简单，优先沿用原图名。"
+    "message": "开启后使用静默保存。默认保存到浏览器的 Downloads 目录。"
   },
   "toggleSilentSave": {
     "message": "开启静默保存"

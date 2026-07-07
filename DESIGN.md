@@ -1,8 +1,8 @@
-# Img Save As Chrome 插件设计
+# Image & Screenshot Save As Chrome 插件设计
 
 ## 1. 目标
 
-做一个 **纯本地执行、无远程代码、简洁易用** 的 Chrome Manifest V3 扩展，为网页图片增加右键菜单能力，按“格式优先”组织：
+做一个 **纯本地执行、无远程代码、简洁易用** 的 Chrome Manifest V3 扩展，为网页图片和网页截图增加右键菜单能力，按“格式优先”组织：
 
 - `PNG >`
   - `Save`
@@ -18,7 +18,7 @@
 
 - 所有逻辑和脚本都随扩展本地打包
 - 不依赖云端接口、不上传图片、不做远程配置下发
-- 交互入口只放在浏览器图片右键菜单，避免复杂 UI
+- 交互入口只放在浏览器图片和普通页面右键菜单，避免复杂 UI
 - 默认行为清晰，失败时给出明确提示
 
 ---
@@ -32,11 +32,12 @@
 - 浏览网页时把图片快速另存为指定格式
 - 保存后顺手复制本地文件路径，便于发给同事或粘贴到工具里
 - 保存后顺手复制图片本体，便于直接粘贴到聊天工具、文档或设计软件
+- 保存网页可视区域截图或整页长截图
 
 非目标：
 
 - 不做批量下载
-- 不做截图功能
+- 不做录屏或屏幕级截图
 - 不做在线压缩或远端转码
 - 不做复杂预览弹窗
 
@@ -63,6 +64,32 @@ Image Save As
 └─ WebP
    ├─ Save
    └─ Save & Copy Path
+```
+
+普通页面右键时展开为：
+
+```text
+Page Screenshot As
+├─ Visible Page
+│  ├─ PNG
+│  │  ├─ Save
+│  │  └─ Save & Copy Path
+│  ├─ JPG
+│  │  ├─ Save
+│  │  └─ Save & Copy Path
+│  └─ WebP
+│     ├─ Save
+│     └─ Save & Copy Path
+└─ Full Page
+   ├─ PNG
+   │  ├─ Save
+   │  └─ Save & Copy Path
+   ├─ JPG
+   │  ├─ Save
+   │  └─ Save & Copy Path
+   └─ WebP
+      ├─ Save
+      └─ Save & Copy Path
 ```
 
 这样做的原因：
@@ -244,16 +271,23 @@ C:\Users\name\Downloads\cat-image.webp
 - `contextMenus`
 - `downloads`
 - `storage`
-- `notifications`
 - `offscreen`
 - `clipboardWrite`
+- `scripting`
+- `activeTab`
 
 Host 权限建议：
 
 - `http://*/*`
 - `https://*/*`
+- `file:///*`
 - `data:*`
 - `blob:*`
+
+说明：
+
+- `file://` 页面除 manifest 声明外，还需要用户在 Chrome 扩展详情页启用“允许访问文件网址”
+- 未开启时，扩展应给出明确提示，不应静默失败
 
 ## 6.2 无远程代码约束
 
@@ -284,6 +318,7 @@ Host 权限建议：
 首版尽量只依赖：
 
 - 右键选中的图片 URL
+- 用户主动触发截图时临时访问当前标签页
 - 下载 API
 - 剪贴板 API
 
@@ -314,12 +349,39 @@ Host 权限建议：
 → 通知结果
 ```
 
+## 7.3 Visible Page Screenshot
+
+```text
+用户右键页面
+→ 选择 Visible Page / 格式 / 动作
+→ background 调用 chrome.tabs.captureVisibleTab
+→ 解码为 ImageBitmap
+→ OffscreenCanvas 转为目标格式 Blob
+→ chrome.downloads.download(saveAs: true)
+→ 成功/失败通知
+```
+
+## 7.4 Full Page Screenshot
+
+```text
+用户右键页面
+→ 选择 Full Page / 格式 / 动作
+→ 注入脚本读取页面高度与滚动位置
+→ 从顶部按视口高度逐屏滚动
+→ 每屏调用 chrome.tabs.captureVisibleTab
+→ OffscreenCanvas 纵向拼接
+→ 恢复原滚动位置
+→ chrome.downloads.download(saveAs: true)
+→ 成功/失败通知
+```
+
 ## 8. 异常与边界
 
 需要提前处理的情况：
 
 - 原图是 `data:` URL
 - 原图是 `blob:` URL
+- 原图或页面来自 `file://` 本地文件
 - 原图跨域
 - 图片是 SVG
 - 图片加载成功但转码失败
@@ -328,12 +390,17 @@ Host 权限建议：
 - 下载取消
 - 下载成功但本地路径读取失败
 - 剪贴板被系统策略拦截
+- 长截图期间用户切换标签页
+- `file://` 本地页面未开启扩展文件网址访问
+- 页面过长导致单张图片超过 Canvas 安全阈值
+- 固定定位元素在滚动拼接中重复出现
 
 设计决策：
 
 - SVG：首版当作位图渲染后导出 PNG/JPG/WebP，不保留矢量
 - 动图：首版只导出首帧静态图
 - 超大图：超过安全阈值时提示失败或降级处理，避免后台内存爆掉
+- 长截图：首版采用滚动拼接，不申请 `debugger` 权限
 
 建议阈值：
 
@@ -355,7 +422,7 @@ Host 权限建议：
 视觉建议：
 
 - 图标用黑白双色，偏工具感
-- 插件名简短直接，例如 `Img Save As`
+- 插件名直接覆盖当前功能边界，例如 `Image & Screenshot Save As`
 - options 页延续系统风格，低视觉噪音
 
 ---

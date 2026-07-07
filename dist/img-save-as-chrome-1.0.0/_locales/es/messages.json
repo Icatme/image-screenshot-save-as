@@ -1,12 +1,12 @@
 {
   "extName": {
-    "message": "Img Save As"
+    "message": "Guardar imagen y captura como"
   },
   "extDescription": {
-    "message": "Guarda imágenes web localmente como PNG, JPG o WebP, con copia opcional de la ruta e historial local."
+    "message": "Guarda imágenes web y capturas de página localmente como PNG, JPG o WebP, con copia opcional de la ruta e historial local."
   },
   "extActionTitle": {
-    "message": "Img Save As"
+    "message": "Guardar imagen y captura como"
   },
   "menuRoot": {
     "message": "Guardar imagen como"
@@ -16,6 +16,15 @@
   },
   "menuActionCopyPath": {
     "message": "Guardar && Copiar ruta"
+  },
+  "menuScreenshotRoot": {
+    "message": "Guardar captura de página como"
+  },
+  "menuScreenshotVisible": {
+    "message": "Página visible"
+  },
+  "menuScreenshotFullPage": {
+    "message": "Página completa"
   },
   "notifySaveFailedTitle": {
     "message": "Error al guardar"
@@ -28,6 +37,12 @@
   },
   "errorUnableReadImage": {
     "message": "No se pudo leer esta imagen. Algunas imágenes blob o protegidas pueden estar bloqueadas en esta página."
+  },
+  "errorUnableReadFileImage": {
+    "message": "No se pudo leer esta imagen local. Asegúrate de que la imagen sea visible en la página y de que la extensión tenga permitido acceder a URLs de archivo."
+  },
+  "errorFileUrlAccessRequired": {
+    "message": "El acceso a archivos locales está desactivado. Abre la página de detalles de la extensión y activa Permitir acceso a URLs de archivo."
   },
   "errorPageFetchFailed": {
     "message": "La solicitud de la página falló con el estado $STATUS$.",
@@ -63,6 +78,35 @@
   "errorUnknown": {
     "message": "Error desconocido."
   },
+  "errorScreenshotNoTab": {
+    "message": "Chrome no proporcionó una pestaña utilizable para esta captura."
+  },
+  "errorScreenshotAlreadyRunning": {
+    "message": "Ya hay una captura en curso en esta pestaña."
+  },
+  "errorScreenshotMetricsUnavailable": {
+    "message": "No se pudo leer el tamaño de captura de esta página."
+  },
+  "errorScreenshotTabChanged": {
+    "message": "La captura se detuvo porque cambió la pestaña activa."
+  },
+  "errorScreenshotEmpty": {
+    "message": "Esta página generó una captura vacía."
+  },
+  "errorScreenshotTooLargeEdge": {
+    "message": "Esta página es demasiado grande para una sola imagen. El borde máximo es $EDGE$px.",
+    "placeholders": {
+      "edge": {
+        "content": "$1"
+      }
+    }
+  },
+  "errorScreenshotTooLargePixels": {
+    "message": "Esta página es demasiado grande para capturarla con seguridad como una sola imagen."
+  },
+  "errorScreenshotScrollStalled": {
+    "message": "La página no pudo desplazarse lo suficiente para terminar la captura larga."
+  },
   "notifySavedAndCopiedTitle": {
     "message": "Guardado y copiado"
   },
@@ -85,6 +129,17 @@
       }
     }
   },
+  "notifyScreenshotSavedTitle": {
+    "message": "Captura guardada"
+  },
+  "notifyScreenshotSavedMessage": {
+    "message": "Captura guardada como $FORMAT$.",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
   "notifySavedCopyFailedMessage": {
     "message": "Guardado como $FORMAT$, pero no se pudo copiar la ruta del archivo: $ERROR$",
     "placeholders": {
@@ -100,13 +155,40 @@
     "message": "La descarga se interrumpió antes de poder copiar la ruta del archivo."
   },
   "optionsTitle": {
-    "message": "Configuración de Img Save As"
+    "message": "Configuración de Guardar imagen y captura como"
   },
   "optionsHeading": {
-    "message": "Img Save As"
+    "message": "Guardar imagen y captura como"
   },
   "optionsIntro": {
-    "message": "Una extensión de menú contextual para imágenes que funciona totalmente en local. Esta primera versión mantiene solo lo esencial: calidad de exportación, guardado silencioso e historial local."
+    "message": "Una extensión local para guardar imágenes y capturas de página desde el menú contextual. Esta versión mantiene lo esencial: calidad de exportación, guardado silencioso e historial local."
+  },
+  "heroEyebrow": {
+    "message": "Utilidad local"
+  },
+  "heroTilePng": {
+    "message": "Sin pérdida primero"
+  },
+  "heroTilePath": {
+    "message": "Copiar tras guardar"
+  },
+  "heroTileLocal": {
+    "message": "Sin código remoto"
+  },
+  "heroNote": {
+    "message": "Haz clic derecho en una imagen o página, elige un formato y guarda rápido. Copia la ruta cuando la necesites."
+  },
+  "sectionTagInterface": {
+    "message": "Interfaz"
+  },
+  "sectionTagOutput": {
+    "message": "Salida"
+  },
+  "sectionTagBehavior": {
+    "message": "Comportamiento"
+  },
+  "sectionTagRecords": {
+    "message": "Registro"
   },
   "panelLanguageTitle": {
     "message": "Idioma"
@@ -151,7 +233,7 @@
     "message": "Modo de guardado"
   },
   "panelSaveModeBody": {
-    "message": "Cuando está activado, la extensión intenta descargar directamente sin abrir por sí misma el cuadro de Guardar como. Chrome aún puede mostrar un selector si la configuración del navegador está establecida para preguntar dónde guardar cada archivo. Los nombres de archivo siguen siendo simples en la v1 y priorizan el nombre original de la imagen."
+    "message": "Cuando está activado, la extensión guarda en silencio. Los archivos se guardan en la carpeta Downloads predeterminada del navegador."
   },
   "toggleSilentSave": {
     "message": "Activar guardado silencioso"

@@ -2,10 +2,22 @@ import { getTranslator } from "../lib/i18n.js";
 import { DEFAULT_SETTINGS, getSettings, saveSettings } from "../lib/settings.js";
 
 const SAVE_HISTORY_KEY = "saveHistory";
+const AUTO_SAVE_DELAY_MS = 240;
 let activeLocale = "en";
 let translate = (messageName) => messageName;
+let autoSaveTimeoutId = null;
+let toastTimeoutId = null;
 
 const form = document.getElementById("settings-form");
+const heroEyebrow = document.getElementById("hero-eyebrow");
+const heroTilePng = document.getElementById("hero-tile-png");
+const heroTilePath = document.getElementById("hero-tile-path");
+const heroTileLocal = document.getElementById("hero-tile-local");
+const heroNote = document.getElementById("hero-note");
+const sectionTagInterface = document.getElementById("section-tag-interface");
+const sectionTagOutput = document.getElementById("section-tag-output");
+const sectionTagBehavior = document.getElementById("section-tag-behavior");
+const sectionTagRecords = document.getElementById("section-tag-records");
 const panelLanguageTitle = document.getElementById("panel-language-title");
 const panelLanguageBody = document.getElementById("panel-language-body");
 const localeOverrideLabel = document.getElementById("locale-override-label");
@@ -24,16 +36,13 @@ const panelSaveModeBody = document.getElementById("panel-save-mode-body");
 const silentSaveLabel = document.getElementById("silent-save-label");
 const panelHistoryTitle = document.getElementById("panel-history-title");
 const panelHistoryBody = document.getElementById("panel-history-body");
-const jpgQualityValue = document.getElementById("jpg-quality-value");
-const webpQualityValue = document.getElementById("webp-quality-value");
-const saveSettingsButton = document.getElementById("save-settings-button");
 const resetButton = document.getElementById("reset-button");
 const openHistoryButton = document.getElementById("open-history-button");
 const closeHistoryButton = document.getElementById("close-history-button");
 const clearHistoryButton = document.getElementById("clear-history-button");
 const historyDialog = document.getElementById("history-dialog");
 const historyDialogTitle = document.getElementById("history-dialog-title");
-const status = document.getElementById("status");
+const toast = document.getElementById("toast");
 const historyList = document.getElementById("history-list");
 
 void initialize();
@@ -44,42 +53,41 @@ async function initialize() {
   applySettings(settings);
   await renderHistory();
 
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+  });
+
   jpgQualityInput.addEventListener("input", () => {
     updateQualityLabel(jpgQualityLabel, "labelJpgQuality", jpgQualityInput.value);
+    scheduleAutoSave();
   });
 
   webpQualityInput.addEventListener("input", () => {
     updateQualityLabel(webpQualityLabel, "labelWebpQuality", webpQualityInput.value);
+    scheduleAutoSave();
   });
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
+  localeOverrideSelect.addEventListener("change", () => {
+    void persistSettings({ immediate: true });
+  });
 
-    const saved = await saveSettings({
-      localeOverride: localeOverrideSelect.value,
-      jpgQuality: jpgQualityInput.value,
-      webpQuality: webpQualityInput.value,
-      silentSave: silentSaveInput.checked
-    });
-
-    await setLocale(saved.localeOverride);
-    applySettings(saved);
-    await renderHistory();
-    setStatus(t("statusSettingsSaved"));
+  silentSaveInput.addEventListener("change", () => {
+    void persistSettings({ immediate: true });
   });
 
   resetButton.addEventListener("click", async () => {
+    window.clearTimeout(autoSaveTimeoutId);
     const saved = await saveSettings(DEFAULT_SETTINGS);
     await setLocale(saved.localeOverride);
     applySettings(saved);
     await renderHistory();
-    setStatus(t("statusDefaultsRestored"));
+    showToast(t("statusDefaultsRestored"));
   });
 
   clearHistoryButton.addEventListener("click", async () => {
     await chrome.storage.local.remove(SAVE_HISTORY_KEY);
     await renderHistory();
-    setStatus(t("statusHistoryCleared"));
+    showToast(t("statusHistoryCleared"));
   });
 
   openHistoryButton.addEventListener("click", async () => {
@@ -105,14 +113,6 @@ function applySettings(settings) {
   silentSaveInput.checked = settings.silentSave;
   updateQualityLabel(jpgQualityLabel, "labelJpgQuality", settings.jpgQuality);
   updateQualityLabel(webpQualityLabel, "labelWebpQuality", settings.webpQuality);
-}
-
-function setStatus(message) {
-  status.textContent = message;
-  window.clearTimeout(setStatus.timeoutId);
-  setStatus.timeoutId = window.setTimeout(() => {
-    status.textContent = "";
-  }, 2200);
 }
 
 async function renderHistory() {
@@ -178,8 +178,17 @@ function extractName(path) {
 function localizeStaticContent() {
   document.documentElement.lang = normalizeHtmlLang(activeLocale);
   document.title = t("optionsTitle");
+  heroEyebrow.textContent = t("heroEyebrow");
   optionsHeading.textContent = t("optionsHeading");
   optionsIntro.textContent = t("optionsIntro");
+  heroTilePng.textContent = t("heroTilePng");
+  heroTilePath.textContent = t("heroTilePath");
+  heroTileLocal.textContent = t("heroTileLocal");
+  heroNote.textContent = t("heroNote");
+  sectionTagInterface.textContent = t("sectionTagInterface");
+  sectionTagOutput.textContent = t("sectionTagOutput");
+  sectionTagBehavior.textContent = t("sectionTagBehavior");
+  sectionTagRecords.textContent = t("sectionTagRecords");
   panelLanguageTitle.textContent = t("panelLanguageTitle");
   panelLanguageBody.textContent = t("panelLanguageBody");
   localeOverrideLabel.textContent = t("labelLanguage");
@@ -196,7 +205,6 @@ function localizeStaticContent() {
   silentSaveLabel.textContent = t("toggleSilentSave");
   panelHistoryTitle.textContent = t("panelHistoryTitle");
   panelHistoryBody.textContent = t("panelHistoryBody");
-  saveSettingsButton.textContent = t("buttonSaveSettings");
   resetButton.textContent = t("buttonResetSettings");
   openHistoryButton.textContent = t("buttonOpenHistory");
   clearHistoryButton.textContent = t("buttonClearHistory");
@@ -235,6 +243,41 @@ function setLocaleOptionText(value, label) {
   if (option) {
     option.textContent = label;
   }
+}
+
+function scheduleAutoSave() {
+  window.clearTimeout(autoSaveTimeoutId);
+  autoSaveTimeoutId = window.setTimeout(() => {
+    void persistSettings({ immediate: false });
+  }, AUTO_SAVE_DELAY_MS);
+}
+
+async function persistSettings({ immediate }) {
+  window.clearTimeout(autoSaveTimeoutId);
+
+  const saved = await saveSettings({
+    localeOverride: localeOverrideSelect.value,
+    jpgQuality: jpgQualityInput.value,
+    webpQuality: webpQualityInput.value,
+    silentSave: silentSaveInput.checked
+  });
+
+  await setLocale(saved.localeOverride);
+  applySettings(saved);
+  showToast(t("statusSettingsSaved"));
+
+  if (immediate) {
+    await renderHistory();
+  }
+}
+
+function showToast(message) {
+  toast.textContent = message;
+  toast.dataset.visible = "true";
+  window.clearTimeout(toastTimeoutId);
+  toastTimeoutId = window.setTimeout(() => {
+    toast.dataset.visible = "false";
+  }, 1600);
 }
 
 function escapeHtml(value) {

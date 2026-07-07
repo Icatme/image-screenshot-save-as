@@ -3,85 +3,280 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Img Save As Settings</title>
+    <title>Image &amp; Screenshot Save As Settings</title>
     <style>
       :root {
         color-scheme: light;
-        --bg: #f3f0e8;
-        --paper: #fffdf9;
-        --ink: #1f1d1a;
-        --muted: #675f52;
-        --line: #d2c8b7;
-        --accent: #1e5ec9;
+        --bg: oklch(0.94 0.03 85);
+        --paper: oklch(0.985 0.01 92);
+        --panel: oklch(0.97 0.02 88 / 0.88);
+        --panel-strong: oklch(0.92 0.05 80);
+        --ink: oklch(0.2 0.03 52);
+        --muted: oklch(0.42 0.03 55);
+        --line: oklch(0.72 0.04 75);
+        --accent: oklch(0.56 0.2 32);
+        --accent-soft: oklch(0.93 0.05 32);
+        --signal: oklch(0.53 0.16 255);
+        --signal-soft: oklch(0.93 0.04 255);
+        --shadow: 0 26px 80px rgba(67, 44, 19, 0.14);
+        --radius-xl: 34px;
+        --radius-lg: 24px;
+        --radius-md: 18px;
+        --radius-sm: 14px;
       }
 
       * {
         box-sizing: border-box;
       }
 
+      html {
+        background:
+          linear-gradient(135deg, rgba(194, 61, 26, 0.08), transparent 28%),
+          linear-gradient(180deg, oklch(0.97 0.02 92), var(--bg));
+      }
+
       body {
         margin: 0;
         min-height: 100vh;
-        font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-        background:
-          radial-gradient(circle at top left, rgba(30, 94, 201, 0.08), transparent 28%),
-          linear-gradient(180deg, #faf7f1, var(--bg));
+        font-family: "Aptos", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
         color: var(--ink);
+        background:
+          radial-gradient(circle at 14% 10%, rgba(194, 61, 26, 0.18), transparent 24%),
+          radial-gradient(circle at 82% 18%, rgba(58, 112, 216, 0.14), transparent 22%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 36%);
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(68, 48, 28, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(68, 48, 28, 0.05) 1px, transparent 1px);
+        background-size: 28px 28px;
+        mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.22), transparent 78%);
+        pointer-events: none;
       }
 
       main {
-        width: min(860px, calc(100vw - 32px));
-        margin: 40px auto;
-        padding: 32px;
-        border: 1px solid rgba(31, 29, 26, 0.08);
-        border-radius: 28px;
-        background: color-mix(in srgb, var(--paper) 92%, white 8%);
-        box-shadow: 0 14px 50px rgba(74, 56, 24, 0.08);
+        width: min(1220px, calc(100vw - 32px));
+        margin: clamp(18px, 3vw, 36px) auto;
+        display: grid;
+        grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+        gap: clamp(18px, 2.5vw, 30px);
+        align-items: start;
+      }
+
+      .hero {
+        position: sticky;
+        top: 20px;
+        overflow: hidden;
+        min-height: min(860px, calc(100vh - 40px));
+        padding: clamp(28px, 4vw, 44px);
+        border: 1px solid rgba(86, 59, 28, 0.14);
+        border-radius: var(--radius-xl);
+        background:
+          linear-gradient(160deg, rgba(255, 249, 239, 0.92), rgba(247, 236, 214, 0.86)),
+          var(--paper);
+        box-shadow: var(--shadow);
+      }
+
+      .hero::before {
+        content: "";
+        position: absolute;
+        inset: auto -12% -14% 42%;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at 34% 34%, rgba(255, 255, 255, 0.88), transparent 0 18%),
+          linear-gradient(135deg, rgba(194, 61, 26, 0.92), rgba(103, 42, 173, 0.82));
+        filter: blur(4px);
+        opacity: 0.92;
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        inset: 18px;
+        border: 1px solid rgba(86, 59, 28, 0.08);
+        border-radius: calc(var(--radius-xl) - 8px);
+        pointer-events: none;
+      }
+
+      .hero-inner,
+      .settings-shell {
+        position: relative;
+        z-index: 1;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.78);
+        border: 1px solid rgba(86, 59, 28, 0.12);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow::before {
+        content: "";
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 18px 0 0 var(--signal);
       }
 
       h1 {
-        margin: 0;
-        font-size: clamp(28px, 4vw, 40px);
-        line-height: 1.05;
-        letter-spacing: -0.04em;
+        max-width: 12ch;
+        margin: 26px 0 0;
+        font-family: Bahnschrift, "Arial Narrow", "Segoe UI", sans-serif;
+        font-size: clamp(42px, 7vw, 84px);
+        line-height: 0.96;
+        letter-spacing: 0;
+        text-transform: uppercase;
+        overflow-wrap: anywhere;
       }
 
       .intro {
-        margin: 14px 0 0;
+        width: min(42ch, 100%);
+        margin: 24px 0 0;
+        font-size: clamp(16px, 1.75vw, 20px);
+        line-height: 1.6;
+        color: color-mix(in srgb, var(--ink) 72%, var(--muted) 28%);
+      }
+
+      .hero-strip {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: clamp(30px, 5vw, 54px);
+      }
+
+      .hero-tile {
+        padding: 16px;
+        border-radius: var(--radius-md);
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(86, 59, 28, 0.12);
+      }
+
+      .hero-tile strong {
+        display: block;
+        font-family: Bahnschrift, "Arial Narrow", sans-serif;
+        font-size: clamp(22px, 3vw, 32px);
+        letter-spacing: -0.05em;
+      }
+
+      .hero-tile span {
+        display: block;
+        margin-top: 6px;
+        font-size: 12px;
         color: var(--muted);
-        font-size: 15px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+
+      .hero-note {
+        width: min(28ch, 100%);
+        margin-top: clamp(34px, 5vw, 60px);
+        margin-left: auto;
+        padding: 18px 20px;
+        border-left: 5px solid var(--ink);
+        background: rgba(255, 252, 247, 0.78);
+        box-shadow: 0 14px 34px rgba(79, 55, 27, 0.12);
+        font-size: 14px;
         line-height: 1.7;
-        max-width: 58ch;
+      }
+
+      .settings-shell {
+        padding: clamp(18px, 2.2vw, 28px);
+        border-radius: var(--radius-xl);
+        background:
+          linear-gradient(180deg, rgba(255, 253, 247, 0.94), rgba(252, 245, 232, 0.92));
+        border: 1px solid rgba(86, 59, 28, 0.12);
+        box-shadow: var(--shadow);
       }
 
       form {
         display: grid;
-        gap: 18px;
-        margin-top: 30px;
+        gap: 16px;
       }
 
       .panel {
-        padding: 20px;
-        border: 1px solid var(--line);
-        border-radius: 20px;
-        background: rgba(255, 255, 255, 0.76);
+        position: relative;
+        overflow: hidden;
+        padding: 22px 22px 20px;
+        border-radius: var(--radius-lg);
+        border: 1px solid rgba(86, 59, 28, 0.1);
+        background: var(--panel);
+        transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+      }
+
+      .panel::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 10px;
+        background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 34%, white 66%));
+      }
+
+      .panel:nth-of-type(2)::before {
+        background: linear-gradient(180deg, var(--signal), color-mix(in srgb, var(--signal) 34%, white 66%));
+      }
+
+      .panel:nth-of-type(3)::before {
+        background: linear-gradient(180deg, oklch(0.62 0.16 135), color-mix(in srgb, oklch(0.62 0.16 135) 34%, white 66%));
+      }
+
+      .panel:nth-of-type(4)::before {
+        background: linear-gradient(180deg, oklch(0.42 0.04 55), color-mix(in srgb, oklch(0.42 0.04 55) 34%, white 66%));
+      }
+
+      .panel:hover {
+        transform: translateY(-2px);
+        border-color: rgba(86, 59, 28, 0.18);
+        box-shadow: 0 18px 42px rgba(87, 61, 30, 0.1);
+      }
+
+      .section-tag {
+        display: inline-block;
+        margin-bottom: 12px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.8);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
       }
 
       .panel h2 {
-        margin: 0 0 8px;
-        font-size: 16px;
+        margin: 0;
+        font-family: Bahnschrift, "Arial Narrow", sans-serif;
+        font-size: clamp(24px, 3vw, 34px);
+        line-height: 0.94;
+        letter-spacing: -0.05em;
       }
 
       .panel p {
-        margin: 0 0 16px;
-        color: var(--muted);
+        max-width: 48ch;
+        margin: 10px 0 0;
+        color: color-mix(in srgb, var(--ink) 65%, var(--muted) 35%);
         font-size: 14px;
-        line-height: 1.6;
+        line-height: 1.65;
       }
 
       .field-grid {
         display: grid;
         gap: 14px;
+        margin-top: 18px;
       }
 
       .field-grid.two {
@@ -93,45 +288,103 @@
         gap: 8px;
       }
 
-      .toggle {
+      label {
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 12px 14px;
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        background: #fff;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 13px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
       }
 
-      .toggle input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
-        margin: 0;
-      }
-
-      label {
-        font-size: 14px;
-        font-weight: 600;
+      select,
+      button {
+        font: inherit;
       }
 
       select {
         width: 100%;
         appearance: none;
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        background: #fff;
+        padding: 14px 16px;
+        border: 1px solid rgba(86, 59, 28, 0.14);
+        border-radius: var(--radius-sm);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 242, 231, 0.96));
         color: var(--ink);
-        padding: 12px 14px;
-        font: inherit;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      }
+
+      .range-wrap {
+        position: relative;
+        padding: 16px 16px 14px;
+        border-radius: var(--radius-sm);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(243, 235, 221, 0.96));
+        border: 1px solid rgba(86, 59, 28, 0.12);
       }
 
       input[type="range"] {
         width: 100%;
+        margin: 0;
+        accent-color: var(--accent);
+      }
+
+      .range-wrap.signal input[type="range"] {
+        accent-color: var(--signal);
       }
 
       .value {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 58px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.76);
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0;
         font-variant-numeric: tabular-nums;
-        color: var(--accent);
+      }
+
+      .toggle {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 14px;
+        padding: 18px;
+        border-radius: var(--radius-md);
+        border: 1px solid rgba(86, 59, 28, 0.12);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 238, 226, 0.96));
+      }
+
+      .toggle::after {
+        content: "Downloads";
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: var(--signal-soft);
+        color: var(--signal);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .toggle input[type="checkbox"] {
+        width: 22px;
+        height: 22px;
+        margin: 0;
+        accent-color: var(--accent);
+      }
+
+      .toggle span {
+        font-size: 15px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
       }
 
       .actions {
@@ -139,47 +392,99 @@
         align-items: center;
         gap: 12px;
         flex-wrap: wrap;
+        margin-top: 16px;
       }
 
       button {
         appearance: none;
-        border: 0;
+        padding: 13px 18px;
         border-radius: 999px;
-        background: var(--ink);
-        color: #fff;
-        padding: 12px 18px;
-        font: inherit;
-        font-weight: 700;
+        border: 1px solid transparent;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 92%, white 8%), color-mix(in srgb, var(--accent) 74%, black 26%));
+        color: oklch(0.98 0.01 92);
+        font-size: 13px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
         cursor: pointer;
+        box-shadow: 0 14px 30px rgba(172, 66, 28, 0.2);
+        transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 18px 36px rgba(172, 66, 28, 0.26);
       }
 
       button.secondary {
-        background: transparent;
-        color: var(--muted);
-        border: 1px solid var(--line);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(240, 231, 216, 0.96));
+        color: var(--ink);
+        border-color: rgba(86, 59, 28, 0.14);
+        box-shadow: none;
       }
 
-      .status {
-        min-height: 24px;
+      .reset-row {
+        justify-content: flex-end;
+      }
+
+      .empty {
+        padding: 18px;
+        border-radius: var(--radius-md);
+        background: rgba(255, 255, 255, 0.78);
         color: var(--muted);
-        font-size: 14px;
+      }
+
+      dialog {
+        width: min(860px, calc(100vw - 24px));
+        padding: 0;
+        border: 1px solid rgba(86, 59, 28, 0.14);
+        border-radius: var(--radius-xl);
+        background:
+          linear-gradient(180deg, rgba(255, 253, 247, 0.98), rgba(245, 237, 224, 0.98));
+        color: var(--ink);
+        box-shadow: 0 40px 100px rgba(31, 29, 26, 0.26);
+      }
+
+      dialog::backdrop {
+        background: rgba(31, 29, 26, 0.26);
+        backdrop-filter: blur(6px);
+      }
+
+      .dialog-body {
+        padding: 24px;
+      }
+
+      .dialog-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 16px;
+      }
+
+      .dialog-title {
+        margin: 0;
+        font-family: Bahnschrift, "Arial Narrow", sans-serif;
+        font-size: clamp(26px, 3vw, 36px);
+        letter-spacing: -0.05em;
       }
 
       .list {
         display: grid;
-        gap: 10px;
+        gap: 12px;
       }
 
       .list-item {
-        padding: 12px 14px;
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        background: #fff;
+        padding: 14px 16px;
+        border-radius: var(--radius-md);
+        border: 1px solid rgba(86, 59, 28, 0.1);
+        background: rgba(255, 255, 255, 0.74);
       }
 
       .list-item[data-status="error"] {
-        border-color: #e6b8b1;
-        background: #fff8f6;
+        background: var(--accent-soft);
+        border-color: rgba(194, 61, 26, 0.18);
       }
 
       .list-head {
@@ -187,11 +492,12 @@
         justify-content: space-between;
         gap: 12px;
         margin-bottom: 6px;
-        font-size: 13px;
+        font-size: 12px;
       }
 
       .list-title {
-        font-weight: 700;
+        font-weight: 900;
+        letter-spacing: 0.01em;
         word-break: break-all;
       }
 
@@ -202,140 +508,238 @@
 
       .list-message,
       .list-meta {
-        color: var(--muted);
+        color: color-mix(in srgb, var(--ink) 68%, var(--muted) 32%);
         font-size: 14px;
-        line-height: 1.5;
+        line-height: 1.55;
         word-break: break-word;
       }
 
       .list-meta {
-        font-size: 12px;
         margin-top: 6px;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
       }
 
-      .empty {
-        color: var(--muted);
-        font-size: 14px;
+      .toast {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        z-index: 20;
+        transform: translate(-50%, -50%) scale(0.96);
+        padding: 14px 20px;
+        border-radius: 999px;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--ink) 92%, white 8%), color-mix(in srgb, var(--ink) 84%, black 16%));
+        color: var(--paper);
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        box-shadow: 0 24px 60px rgba(31, 29, 26, 0.28);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 180ms ease, transform 180ms ease;
       }
 
-      dialog {
-        width: min(760px, calc(100vw - 24px));
-        padding: 0;
-        border: 1px solid rgba(31, 29, 26, 0.08);
-        border-radius: 24px;
-        background: var(--paper);
-        color: var(--ink);
-        box-shadow: 0 24px 80px rgba(31, 29, 26, 0.2);
+      .toast[data-visible="true"] {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
       }
 
-      dialog::backdrop {
-        background: rgba(31, 29, 26, 0.32);
+      @media (prefers-reduced-motion: no-preference) {
+        .hero,
+        .settings-shell,
+        .panel {
+          animation: rise-in 480ms ease both;
+        }
+
+        .panel:nth-of-type(2) {
+          animation-delay: 60ms;
+        }
+
+        .panel:nth-of-type(3) {
+          animation-delay: 120ms;
+        }
+
+        .panel:nth-of-type(4) {
+          animation-delay: 180ms;
+        }
       }
 
-      .dialog-body {
-        padding: 22px;
+      @keyframes rise-in {
+        from {
+          opacity: 0;
+          transform: translateY(18px);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
-      .dialog-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 14px;
-      }
+      @media (max-width: 980px) {
+        main {
+          grid-template-columns: 1fr;
+        }
 
-      .dialog-title {
-        margin: 0;
-        font-size: 18px;
+        .hero {
+          position: relative;
+          top: 0;
+          min-height: auto;
+        }
+
+        .hero-note {
+          margin-left: 0;
+        }
       }
 
       @media (max-width: 720px) {
         main {
-          margin: 16px auto;
-          padding: 22px;
-          border-radius: 22px;
+          width: min(100vw - 20px, 1220px);
+          gap: 16px;
+          margin: 10px auto 20px;
         }
 
+        .hero,
+        .settings-shell {
+          padding: 20px;
+          border-radius: 24px;
+        }
+
+        .hero-strip,
         .field-grid.two {
           grid-template-columns: 1fr;
+        }
+
+        .dialog-body {
+          padding: 18px;
         }
 
         .actions {
           flex-direction: column;
           align-items: stretch;
         }
+
+        button {
+          width: 100%;
+        }
+
+        .toggle {
+          grid-template-columns: auto 1fr;
+        }
+
+        .toggle::after {
+          grid-column: 1 / -1;
+          justify-self: start;
+        }
       }
     </style>
   </head>
   <body>
     <main>
-      <h1 id="options-heading">Img Save As</h1>
-      <p class="intro" id="options-intro">
-        这是一个纯本地执行的图片右键扩展。这里保留第一版必要配置：导出质量、静默保存，以及本地保存历史。
-      </p>
+      <section class="hero">
+        <div class="hero-inner">
+          <div class="eyebrow" id="hero-eyebrow">Local Utility</div>
+          <h1 id="options-heading">图片与截图另存为</h1>
+          <p class="intro" id="options-intro">
+            这是一个纯本地执行的图片与网页截图另存为扩展。这里保留必要配置：导出质量、静默保存，以及本地保存历史。
+          </p>
 
-      <form id="settings-form">
-        <section class="panel">
-          <h2 id="panel-language-title">语言</h2>
-          <p id="panel-language-body">默认跟随浏览器界面语言，也可以在这里手动指定。</p>
-
-          <div class="field">
-            <label for="locale-override" id="locale-override-label">界面语言</label>
-            <select id="locale-override" name="localeOverride">
-              <option value="auto">Auto</option>
-              <option value="en">English</option>
-              <option value="zh_CN">简体中文</option>
-              <option value="zh_TW">繁體中文</option>
-              <option value="es">Español</option>
-              <option value="de">Deutsch</option>
-            </select>
-          </div>
-        </section>
-
-        <section class="panel">
-          <h2 id="panel-quality-title">导出质量</h2>
-          <p id="panel-quality-body">PNG 始终无损。JPG 和 WebP 使用下面的质量值，范围 0.10 到 1.00。</p>
-
-          <div class="field-grid two">
-            <div class="field">
-              <label for="jpg-quality" id="jpg-quality-label">JPG 质量 <span class="value" id="jpg-quality-value">0.92</span></label>
-              <input id="jpg-quality" name="jpgQuality" type="range" min="0.1" max="1" step="0.01" value="0.92">
+          <div class="hero-strip" aria-hidden="true">
+            <div class="hero-tile">
+              <strong>PNG</strong>
+              <span id="hero-tile-png">Lossless First</span>
             </div>
-
-            <div class="field">
-              <label for="webp-quality" id="webp-quality-label">WebP 质量 <span class="value" id="webp-quality-value">0.92</span></label>
-              <input id="webp-quality" name="webpQuality" type="range" min="0.1" max="1" step="0.01" value="0.92">
+            <div class="hero-tile">
+              <strong>PATH</strong>
+              <span id="hero-tile-path">Copy After Save</span>
+            </div>
+            <div class="hero-tile">
+              <strong>LOCAL</strong>
+              <span id="hero-tile-local">No Remote Code</span>
             </div>
           </div>
-        </section>
 
-        <section class="panel">
-          <h2 id="panel-save-mode-title">保存方式</h2>
-          <p id="panel-save-mode-body">开启后会尽量直接下载，不主动弹出另存为窗口；如果 Chrome 本身开启了“下载前询问保存位置”，浏览器仍可能继续弹窗。文件名第一版保持简单，优先沿用原图名。</p>
-
-          <div class="field-grid">
-            <label class="toggle" for="silent-save">
-              <input id="silent-save" name="silentSave" type="checkbox">
-              <span id="silent-save-label">开启静默保存</span>
-            </label>
+          <div class="hero-note" id="hero-note">
+            右键图片或页面，选择格式，快速保存；需要时再顺手复制路径。
           </div>
-        </section>
-
-        <section class="panel">
-          <h2 id="panel-history-title">保存历史</h2>
-          <p id="panel-history-body">历史记录默认保存在浏览器本地存储中，不依赖远程服务，也不需要 sqlite。点击按钮时再弹出查看。</p>
-          <div class="actions">
-            <button id="open-history-button" type="button">查看历史记录</button>
-            <button class="secondary" id="clear-history-button" type="button">清空历史</button>
-          </div>
-        </section>
-
-        <div class="actions">
-          <button id="save-settings-button" type="submit">保存设置</button>
-          <button class="secondary" id="reset-button" type="button">恢复默认</button>
-          <div class="status" id="status" aria-live="polite"></div>
         </div>
-      </form>
+      </section>
+
+      <section class="settings-shell">
+        <form id="settings-form">
+          <section class="panel">
+            <div class="section-tag" id="section-tag-interface">Interface</div>
+            <h2 id="panel-language-title">语言</h2>
+            <p id="panel-language-body">默认跟随浏览器界面语言，也可以在这里手动指定。</p>
+
+            <div class="field-grid">
+              <div class="field">
+                <label for="locale-override" id="locale-override-label">界面语言</label>
+                <select id="locale-override" name="localeOverride">
+                  <option value="auto">Auto</option>
+                  <option value="en">English</option>
+                  <option value="zh_CN">简体中文</option>
+                  <option value="zh_TW">繁體中文</option>
+                  <option value="es">Español</option>
+                  <option value="de">Deutsch</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="section-tag" id="section-tag-output">Output</div>
+            <h2 id="panel-quality-title">导出质量</h2>
+            <p id="panel-quality-body">PNG 始终无损。JPG 和 WebP 使用下面的质量值，范围 0.10 到 1.00。</p>
+
+            <div class="field-grid two">
+              <div class="field">
+                <label for="jpg-quality" id="jpg-quality-label">JPG 质量 <span class="value" id="jpg-quality-value">0.92</span></label>
+                <div class="range-wrap">
+                  <input id="jpg-quality" name="jpgQuality" type="range" min="0.1" max="1" step="0.01" value="0.92">
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="webp-quality" id="webp-quality-label">WebP 质量 <span class="value" id="webp-quality-value">0.92</span></label>
+                <div class="range-wrap signal">
+                  <input id="webp-quality" name="webpQuality" type="range" min="0.1" max="1" step="0.01" value="0.92">
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="section-tag" id="section-tag-behavior">Behavior</div>
+            <h2 id="panel-save-mode-title">保存方式</h2>
+            <p id="panel-save-mode-body">开启后使用静默保存。默认保存到浏览器的 Downloads 目录。</p>
+
+            <div class="field-grid">
+              <label class="toggle" for="silent-save">
+                <input id="silent-save" name="silentSave" type="checkbox">
+                <span id="silent-save-label">开启静默保存</span>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="section-tag" id="section-tag-records">Records</div>
+            <h2 id="panel-history-title">保存历史</h2>
+            <p id="panel-history-body">历史记录默认保存在浏览器本地存储中，不依赖远程服务，也不需要 sqlite。点击按钮时再弹出查看。</p>
+
+            <div class="actions">
+              <button id="open-history-button" type="button">查看历史记录</button>
+              <button class="secondary" id="clear-history-button" type="button">清空历史</button>
+            </div>
+          </section>
+
+          <div class="actions reset-row">
+            <button class="secondary" id="reset-button" type="button">恢复默认</button>
+          </div>
+        </form>
+      </section>
     </main>
 
     <dialog id="history-dialog">
@@ -347,6 +751,8 @@
         <div class="list" id="history-list"></div>
       </div>
     </dialog>
+
+    <div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
 
     <script type="module" src="./options.js"></script>
   </body>

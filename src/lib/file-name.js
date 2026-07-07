@@ -32,6 +32,16 @@ export function buildDownloadPath({ srcUrl, pageTitle, format }) {
   return sanitizeFilename(`${filenameStem}.${ext}`, ext);
 }
 
+export function buildScreenshotDownloadPath({ pageTitle, pageUrl, mode, format }) {
+  const ext = normalizeExtension(format);
+  const safeTitle = sanitizeSegment(pageTitle || "");
+  const safePageName = sanitizeSegment(extractPageName(pageUrl) || "");
+  const suffix = mode === "full-page" ? "full-page-screenshot" : "visible-screenshot";
+  const filenameStem = [safeTitle || safePageName || "page", suffix].join("-");
+
+  return sanitizeFilename(`${filenameStem}.${ext}`, ext);
+}
+
 function normalizeExtension(format) {
   if (format === "jpg") {
     return "jpg";
@@ -57,6 +67,21 @@ function extractImageName(srcUrl) {
       return "";
     }
 
+    return lastSegment.replace(/\.[a-z0-9]{2,5}$/i, "");
+  } catch {
+    return "";
+  }
+}
+
+function extractPageName(pageUrl) {
+  if (!pageUrl) {
+    return "";
+  }
+
+  try {
+    const url = new URL(pageUrl);
+    const pathname = decodeURIComponent(url.pathname);
+    const lastSegment = pathname.split("/").filter(Boolean).pop() || url.hostname;
     return lastSegment.replace(/\.[a-z0-9]{2,5}$/i, "");
   } catch {
     return "";
