@@ -38,9 +38,6 @@
   "errorUnableReadImage": {
     "message": "无法读取这张图片。某些 blob 图片或受保护图片可能会被当前页面拦截。"
   },
-  "errorExtensionGalleryRestricted": {
-    "message": "Chrome 不允许扩展在 Chrome 应用商店页面中运行脚本。请先在普通标签页打开图片，或改用可见区域截图。"
-  },
   "errorUnableReadFileImage": {
     "message": "无法读取这张本地图片。请确认图片已在页面中正常显示，并且扩展已允许访问文件网址。"
   },

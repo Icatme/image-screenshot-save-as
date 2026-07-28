@@ -1,0 +1,18 @@
+{
+  "name": "image-screenshot-save-as",
+  "version": "1.6.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "node --test tests/browser/*.test.mjs",
+    "package:release": "pwsh -NoProfile -File scripts/package-release.ps1",
+    "verify:release": "pwsh -NoProfile -File scripts/verify-release.ps1"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "devDependencies": {
+    "puppeteer-core": "25.4.0"
+  }
+}

@@ -20,7 +20,6 @@ import {
 	getSourceImageBlob,
 	readDataUrlBlob,
 } from "../lib/image-source.js";
-import { isExtensionGalleryUrl } from "../lib/page-access.js";
 import { getSettings } from "../lib/settings.js";
 import {
 	isPagePreparedForScreenshot,
@@ -259,7 +258,6 @@ async function handleImageMenuClick(command, info, tab) {
 			info.srcUrl,
 			tab?.id,
 			info.frameId,
-			tab?.url,
 			t,
 		);
 		const converted = await convertImageBlob(
@@ -308,14 +306,6 @@ async function handleScreenshotMenuClick(command, tab) {
 		await ensureFileSchemeAccess(tab.url, t);
 	} catch (error) {
 		await notify(t("notifySaveFailedTitle"), getErrorMessage(error), "error");
-		return;
-	}
-	if (command.mode === "full-page" && isExtensionGalleryUrl(tab.url)) {
-		await notify(
-			t("notifySaveFailedTitle"),
-			t("errorExtensionGalleryRestricted"),
-			"error",
-		);
 		return;
 	}
 
@@ -1052,7 +1042,7 @@ async function notify(
 		}),
 		chrome.notifications.create(activityId, {
 			type: "basic",
-			iconUrl: chrome.runtime.getURL("assets/icons/icon-128.png"),
+			iconUrl: "assets/icons/icon-128.png",
 			title,
 			message,
 		}),

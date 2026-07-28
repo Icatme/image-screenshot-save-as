@@ -38,9 +38,6 @@
   "errorUnableReadImage": {
     "message": "No se pudo leer esta imagen. Algunas imágenes blob o protegidas pueden estar bloqueadas en esta página."
   },
-  "errorExtensionGalleryRestricted": {
-    "message": "Chrome no permite que las extensiones ejecuten scripts en Chrome Web Store. Abre la imagen en una pestaña normal o usa una captura del área visible."
-  },
   "errorUnableReadFileImage": {
     "message": "No se pudo leer esta imagen local. Asegúrate de que la imagen sea visible en la página y de que la extensión tenga permitido acceder a URLs de archivo."
   },

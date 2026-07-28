@@ -38,9 +38,6 @@
   "errorUnableReadImage": {
     "message": "無法讀取這張圖片。某些 blob 圖片或受保護圖片可能會被目前頁面攔截。"
   },
-  "errorExtensionGalleryRestricted": {
-    "message": "Chrome 不允許擴充功能在 Chrome 線上應用程式商店頁面中執行指令碼。請先在一般分頁開啟圖片，或改用可見區域截圖。"
-  },
   "errorUnableReadFileImage": {
     "message": "無法讀取這張本地圖片。請確認圖片已在頁面中正常顯示，並且擴充功能已允許存取檔案網址。"
   },

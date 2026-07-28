@@ -1,57 +1,27 @@
-# Image & Screenshot Save As Chrome 插件设计
+# Image & Screenshot Save As：当前实现设计
 
-## 1. 目标
+本文描述仓库当前实现，不是未来功能提案。产品边界是：由用户通过右键菜单主动触发，在浏览器本机完成图片读取、截图、转码、下载和可选的路径复制。
 
-做一个 **纯本地执行、无远程代码、简洁易用** 的 Chrome Manifest V3 扩展，为网页图片和网页截图增加右键菜单能力，按“格式优先”组织：
+## 1. 产品边界
 
-- `PNG >`
-  - `Save`
-  - `Save & Copy Path`
-- `JPG >`
-  - `Save`
-  - `Save & Copy Path`
-- `WebP >`
-  - `Save`
-  - `Save & Copy Path`
+已实现：
 
-核心原则：
+- 网页图片导出为 PNG、JPG 或 WebP
+- 当前可视区域截图和整页滚动截图
+- 每种输出均支持 `Save` 和 `Save & Copy Path`
+- JPG、WebP 质量配置，界面语言配置和静默保存配置
+- 最近活动、保存历史和下载结果反馈
 
-- 所有逻辑和脚本都随扩展本地打包
-- 不依赖云端接口、不上传图片、不做远程配置下发
-- 交互入口只放在浏览器图片和普通页面右键菜单，避免复杂 UI
-- 默认行为清晰，失败时给出明确提示
+不在当前范围内：
 
----
+- 批量下载、图像编辑、录屏或系统级截图
+- 复制图片本体
+- 用户自定义文件名模板
+- 在线转码、账号系统、遥测和远程配置
 
-## 2. 产品定位
+## 2. 用户入口与菜单
 
-这是一个 **“右键即用”的效率型小工具**，不是图像编辑器。
-
-用户场景：
-
-- 浏览网页时把图片快速另存为指定格式
-- 保存后顺手复制本地文件路径，便于发给同事或粘贴到工具里
-- 保存后顺手复制图片本体，便于直接粘贴到聊天工具、文档或设计软件
-- 保存网页可视区域截图或整页长截图
-
-非目标：
-
-- 不做批量下载
-- 不做录屏或屏幕级截图
-- 不做在线压缩或远端转码
-- 不做复杂预览弹窗
-
----
-
-## 3. 交互设计
-
-## 3.1 右键菜单信息架构
-
-建议顶层菜单名：
-
-- `Image Save As`
-
-图片右键时展开为：
+图片右键菜单：
 
 ```text
 Image Save As
@@ -66,409 +36,169 @@ Image Save As
    └─ Save & Copy Path
 ```
 
-普通页面右键时展开为：
+页面右键菜单：
 
 ```text
 Page Screenshot As
 ├─ Visible Page
-│  ├─ PNG
-│  │  ├─ Save
-│  │  └─ Save & Copy Path
-│  ├─ JPG
-│  │  ├─ Save
-│  │  └─ Save & Copy Path
-│  └─ WebP
-│     ├─ Save
-│     └─ Save & Copy Path
+│  └─ PNG / JPG / WebP
+│     └─ Save / Save & Copy Path
 └─ Full Page
-   ├─ PNG
-   │  ├─ Save
-   │  └─ Save & Copy Path
-   ├─ JPG
-   │  ├─ Save
-   │  └─ Save & Copy Path
-   └─ WebP
-      ├─ Save
-      └─ Save & Copy Path
+   └─ PNG / JPG / WebP
+      └─ Save / Save & Copy Path
 ```
 
-这样做的原因：
+菜单随界面语言生成。点击工具栏扩展图标会打开设置页；扩展没有 popup。
 
-- 顶层只有一个入口，不污染原生右键菜单
-- 第一层只保留 3 个格式项，扫描成本更低
-- 用户先决定格式，再决定是否复制，心智更顺
-- 避免依赖“父菜单既能点又能展开”的不稳定交互
-- 每个实际动作都落在叶子节点，逻辑清楚，事件处理简单
+## 3. 保存契约
 
-## 3.2 默认行为
+- `silentSave=false` 是默认值。下载使用 `saveAs: true`，必须由用户在系统窗口中确认；用户取消后，本次下载结束，不会自动切换为静默保存。
+- `silentSave=true` 时下载使用 `saveAs: false`，保存到 Chrome 默认下载目录。
+- `Save` 只保存文件。
+- `Save & Copy Path` 等待下载完成，从 `DownloadItem.filename` 取得最终绝对路径，再通过 offscreen 文档写入文本剪贴板。
+- 文件已经保存但路径复制失败时，保留文件并记录/显示复制错误，不回滚下载。
+- 已创建的下载若被取消或中断，会记录为 `interrupted`，并释放对应的临时 Blob URL；用户在系统窗口取消、Chrome 未返回 download ID 时只产生失败反馈，不伪造下载记录。
 
-- 所有 `Save` / `Save & Copy *` 动作都默认弹出系统保存对话框，相当于真正的 “Save As”
-- 用户确认保存位置后，扩展完成格式转换并下载到本地
-- `Save`：只保存，不复制
-- `Save & Copy Path`：下载完成后复制最终本地绝对路径
+## 4. 运行时模块
 
-说明：
-
-- 如果后续验证 Chrome 原生菜单在某些平台上支持“父项可点击且可展开”，也不建议首版采用
-- 首版优先选稳定、可预期、跨平台一致的层级结构
-
-## 3.3 反馈方式
-
-不做复杂页面。反馈只保留两种：
-
-- 成功：短通知，例如 `Saved as PNG and copied path`
-- 失败：短通知，例如 `Copy image failed: clipboard permission denied`
-
-可选增强：
-
-- 在扩展图标徽标上闪一下成功状态
-- 在通知中带文件名，但不展示过长路径
-
----
-
-## 4. 功能设计
-
-## 4.1 保存格式
-
-首版支持：
-
-- PNG
-- JPG
-- WebP
-
-转换规则：
-
-- PNG：无损，保留透明通道
-- JPG：不支持透明，透明区域填充白色背景
-- WebP：默认有损质量 0.92
-
-建议默认质量配置：
-
-- JPG: `0.92`
-- WebP: `0.92`
-
-## 4.2 文件命名
-
-默认命名模板建议：
-
-```text
-{pageTitle}-{imageName}.{ext}
-```
-
-命名来源优先级：
-
-1. 原图 URL 文件名
-2. 页面标题
-3. `image`
-
-命名清洗规则：
-
-- 去掉非法文件名字符
-- 连续空格折叠为单个 `-`
-- 超长文件名截断到安全长度
-
-重名处理：
-
-- 交由 Chrome 下载系统处理
-- 若用户手动另存，则由系统对话框决定
-
-## 4.3 Save & Copy Path
-
-行为定义：
-
-1. 执行保存
-2. 监听下载完成
-3. 读取最终保存路径
-4. 将绝对路径写入剪贴板
-
-复制内容示例：
-
-```text
-C:\Users\name\Downloads\cat-image.webp
-```
-
-失败策略：
-
-- 保存成功但复制失败：提示 `Saved, but path copy failed`
-- 不回滚已保存文件
-
-## 5. 技术架构
-
-## 5.1 Manifest V3 结构
-
-建议文件结构：
-
-```text
-/manifest.json
-/src/background/service-worker.js
-/src/offscreen/offscreen.html
-/src/offscreen/offscreen.js
-/src/lib/image-convert.js
-/src/lib/file-name.js
-/src/lib/clipboard.js
-/src/options/options.html
-/src/options/options.js
-/assets/icons/*
-```
-
-## 5.2 模块职责
-
-### background service worker
+### `src/background/service-worker.js`
 
 负责：
 
-- 注册右键菜单
-- 响应菜单点击
-- 拉取图片数据
-- 本地转码
-- 触发下载
-- 跟踪下载完成状态
-- 调用 offscreen 文档执行剪贴板写入
-- 发通知
+- 初始化和重建本地化右键菜单
+- 解析图片/截图菜单命令
+- 获取图片数据，协调可视区域或整页截图
+- 调用图片转换、命名、下载和剪贴板模块
+- 跟踪下载完成/中断状态
+- 写入最近活动和保存历史
+- 更新扩展图标的 `OK` / `ERR` 徽标、标题反馈和系统通知
 
-### offscreen document
+### `src/lib/image-convert.js`
 
-负责：
+使用 `createImageBitmap` 和 `OffscreenCanvas` 在本地解码、绘制并导出：
 
-- 执行 `navigator.clipboard.writeText`
-- 执行 `navigator.clipboard.write`
+- PNG 无损并保留透明通道
+- WebP 使用配置质量并保留透明通道
+- JPG 使用配置质量，透明区域先填充白色
+- 压缩源文件上限 `64 MiB`，在解码前拒绝超限输入
+- 普通图片最大边长 `16384px`，最大像素数 `80,000,000`
 
-这样设计的原因：
+### `src/lib/image-encoding.js` 与 `src/lib/image-source.js`
 
-- MV3 service worker 不适合直接做剪贴板交互
-- offscreen 文档是官方推荐的后台 DOM 能力承载方式
+- `image-encoding` 统一格式、MIME、质量、Canvas alpha 和 JPG 白底策略，并提供稳定错误码
+- `image-source` 负责带凭据的受限图片读取、25 秒完整响应超时、64 MiB 流式上限、页面内回退提取和文件网址权限校验
+- 文件网址权限无法由 Chrome 明确确认时按拒绝处理，不猜测为已授权
 
-### lib/image-convert
+### `src/lib/file-name.js`
 
-负责：
+- 图片名依次取原图 URL 文件名、页面标题、`image`
+- 截图名由页面标题/URL 名称加 `visible-screenshot` 或 `full-page-screenshot` 后缀组成
+- 清理 Windows 非法字符和保留名，压缩空白，限制最终长度
 
-- 把原图 Blob 解码为 `ImageBitmap`
-- 用 `OffscreenCanvas` 绘制
-- 按目标格式导出 Blob
-- 统一透明背景、质量参数、尺寸信息
+### `src/lib/clipboard.js` 与 `src/offscreen/*`
 
-### options page
+MV3 service worker 没有可直接使用的 DOM 剪贴板和 Blob URL 生命周期，因此该模块按需创建 offscreen 文档，负责：
 
-负责少量配置：
+- 创建和撤销下载所需的 Blob URL
+- 将最终文件路径写入文本剪贴板
+- 仅在没有活跃操作和 Blob URL 时关闭文档，避免并发下载提前失效
 
-- JPG 质量
-- WebP 质量
-- WebP 复制失败时是否回退 PNG
-- 文件名模板
+### `src/lib/capture-state.js`、`src/lib/screenshot-page.js` 与 `src/lib/storage-state.js`
 
-首版可以没有 popup，只保留 options 页面。
+- `capture-state` 串行管理截图租约和跨 worker 的捕获速率时间戳
+- `screenshot-page` 保存、修改并恢复页面滚动状态；页面属性和超时恢复作为 worker 中断后的第二道保护
+- `storage-state` 用每个 download ID 的独立会话键保存待处理状态，并串行、去重写入活动与历史
 
----
+### `src/lib/settings.js` 与 `src/lib/i18n.js`
 
-## 6. 权限与安全设计
+- 设置通过 `chrome.storage.sync` 保存并在读写时归一化
+- 默认质量均为 `0.92`，质量被限制在 `0.10` 到 `1.00`
+- 默认语言跟随 Chrome，也可手动选择 `en`、`zh_CN`、`zh_TW`、`es`、`de`
 
-## 6.1 目标
+### `src/options/*`
 
-尽量少权限，同时保证“任意网页图片右键即可保存”。
+- 设置修改自动保存；初始化或持久化失败会在页面内显示，而不是只产生未处理的 Promise
+- 提供最近活动、带确认的历史清空和语义化历史对话框
+- 窄屏优先显示设置，营销介绍折叠到页面末尾
 
-建议权限：
+## 5. 图片保存流程
 
-- `contextMenus`
-- `downloads`
-- `storage`
-- `offscreen`
-- `clipboardWrite`
-- `scripting`
-- `activeTab`
+```text
+用户右键图片并选择格式/动作
+→ service worker 取得 srcUrl、页面信息和设置
+→ 读取图片 Blob
+→ image-convert 本地转码
+→ offscreen 创建临时 Blob URL
+→ chrome.downloads.download
+→ 将待处理记录写入 storage.session
+→ downloads.onChanged 报告完成或中断
+→ 释放临时 Blob URL
+→ 可选复制最终路径
+→ 写入活动/历史并显示结果反馈
+```
 
-Host 权限建议：
+HTTP/HTTPS 图片由扩展后台读取。`data:`、`blob:`、`file:` 或后台读取失败的图片会在用户触发范围内通过页面脚本提取；`file:` 还要求用户在 Chrome 扩展详情页开启文件网址访问。
 
-- `http://*/*`
-- `https://*/*`
-- `file:///*`
-- `data:*`
-- `blob:*`
+## 6. 截图流程
 
-说明：
+### 可视区域
 
-- `file://` 页面除 manifest 声明外，还需要用户在 Chrome 扩展详情页启用“允许访问文件网址”
-- 未开启时，扩展应给出明确提示，不应静默失败
+1. 校验当前标签页和文件网址访问权限。
+2. 调用 `chrome.tabs.captureVisibleTab`。
+3. 将捕获结果按目标格式转码，然后进入统一下载流程。
 
-## 6.2 无远程代码约束
+### 整页
 
-必须满足：
+1. 读取页面尺寸、原滚动位置和主要滚动容器。
+2. 从顶部逐屏滚动，按 Chrome `captureVisibleTab` 速率约束串行捕获。
+3. 只拼接每次新出现的区域，生成完整画布。
+4. 在成功、失败或 worker 恢复路径中恢复页面滚动状态。
+5. 按目标格式导出并进入统一下载流程。
 
-- 不加载任何远程 JS
-- 不使用 CDN 脚本
-- 不使用远端配置文件
+整页结果最大边长为 `32767px`、最大像素数为 `100,000,000`。扩展一次只执行一个截图任务；捕获期间标签页失焦或切换会中止流程。
+
+## 7. 状态、反馈与恢复
+
+- 待处理下载保存在 `chrome.storage.session`，而不是只放在 service worker 全局变量中，避免 MV3 worker 休眠后完全失去完成回调上下文。
+- 下载状态以 download ID 为独立记录更新，避免并发下载互相覆盖。
+- 保存历史和最近活动由后台串行更新；历史清空也通过后台消息进入同一写入序列，避免与完成回调竞争。
+- 截图租约和最近一次捕获时间保存在会话存储中，worker 重启后仍可恢复页面并继续遵守 `captureVisibleTab` 速率限制。
+- 工具栏徽标短暂显示 `OK` 或 `ERR`；标题包含最近一次结果，同时创建系统通知。
+- 设置页读取 `recentActivity`，让用户能查看成功和失败详情。
+
+## 8. 数据与保留策略
+
+| 存储区 | 内容 | 上限/生命周期 |
+| --- | --- | --- |
+| `chrome.storage.sync` | 语言、JPG/WebP 质量、静默保存 | 由 Chrome 设置同步策略管理 |
+| `chrome.storage.local` / `recentActivity` | 标题、消息、状态、时间 | 最近 12 条 |
+| `chrome.storage.local` / `saveHistory` | 动作、格式、结果、路径、错误、截图类型和时间 | 最近 200 条 |
+| `chrome.storage.session` | 每个下载的临时处理上下文、截图恢复状态 | 当前浏览器会话 |
+
+不持久化图片二进制内容。保存历史包含本机文件路径，因此设置页提供经确认的清空入口。历史不保存无展示用途的原图 URL 或页面标题。
+
+## 9. 权限与安全边界
+
+- `contextMenus`：创建用户主动触发的图片和页面菜单
+- `downloads`：创建下载并取得最终路径
+- `storage`：设置、活动、历史和会话恢复
+- `notifications`：显示保存、复制和下载结果
+- `offscreen`、`clipboardWrite`：Blob URL 和路径复制
+- `scripting`、`activeTab`：仅在触发动作时读取/滚动当前页面
+- `http://*/*`、`https://*/*`、`file:///*`：读取选中图片；文件协议仍由 Chrome 的用户开关控制
+
+安全约束：
+
+- 不加载远程 JavaScript、CDN 或远程配置
 - 不使用 `eval` / `new Function`
-- CSP 锁死为仅扩展本地资源
+- 不上传图片，不收集浏览历史，不做网络上报
+- 不安装常驻 content script；页面脚本只在用户操作关联的当前标签页临时执行
 
-可以在商店说明中明确写：
+## 10. 已知边界
 
-- `All image conversion happens locally on-device.`
-- `No image data is uploaded to any server.`
-- `No remote code.`
-
-## 6.3 最小信任面
-
-为了避免被 Chrome 或用户认为“高风险扩展”，设计上避免：
-
-- 读取页面文本内容
-- 注入复杂 content script
-- 收集浏览历史
-- 网络上报
-- 账号系统
-
-首版尽量只依赖：
-
-- 右键选中的图片 URL
-- 用户主动触发截图时临时访问当前标签页
-- 下载 API
-- 剪贴板 API
-
----
-
-## 7. 图片处理流程
-
-## 7.1 Save as PNG/JPG/WebP
-
-```text
-用户右键图片
-→ 选择菜单项
-→ background 获取 srcUrl
-→ fetch 原图 Blob
-→ 解码为 ImageBitmap
-→ OffscreenCanvas 转为目标格式 Blob
-→ chrome.downloads.download(saveAs: true)
-→ 成功/失败通知
-```
-
-## 7.2 Save & Copy Path
-
-```text
-保存流程
-→ 监听 downloads.onChanged
-→ 获取 DownloadItem.filename
-→ offscreen 写入文本剪贴板
-→ 通知结果
-```
-
-## 7.3 Visible Page Screenshot
-
-```text
-用户右键页面
-→ 选择 Visible Page / 格式 / 动作
-→ background 调用 chrome.tabs.captureVisibleTab
-→ 解码为 ImageBitmap
-→ OffscreenCanvas 转为目标格式 Blob
-→ chrome.downloads.download(saveAs: true)
-→ 成功/失败通知
-```
-
-## 7.4 Full Page Screenshot
-
-```text
-用户右键页面
-→ 选择 Full Page / 格式 / 动作
-→ 注入脚本读取页面高度与滚动位置
-→ 从顶部按视口高度逐屏滚动
-→ 每屏调用 chrome.tabs.captureVisibleTab
-→ OffscreenCanvas 纵向拼接
-→ 恢复原滚动位置
-→ chrome.downloads.download(saveAs: true)
-→ 成功/失败通知
-```
-
-## 8. 异常与边界
-
-需要提前处理的情况：
-
-- 原图是 `data:` URL
-- 原图是 `blob:` URL
-- 原图或页面来自 `file://` 本地文件
-- 原图跨域
-- 图片是 SVG
-- 图片加载成功但转码失败
-- JPG 遇到透明图
-- 页面图片懒加载，右键时 URL 已更新
-- 下载取消
-- 下载成功但本地路径读取失败
-- 剪贴板被系统策略拦截
-- 长截图期间用户切换标签页
-- `file://` 本地页面未开启扩展文件网址访问
-- 页面过长导致单张图片超过 Canvas 安全阈值
-- 固定定位元素在滚动拼接中重复出现
-
-设计决策：
-
-- SVG：首版当作位图渲染后导出 PNG/JPG/WebP，不保留矢量
-- 动图：首版只导出首帧静态图
-- 超大图：超过安全阈值时提示失败或降级处理，避免后台内存爆掉
-- 长截图：首版采用滚动拼接，不申请 `debugger` 权限
-
-建议阈值：
-
-- 最大边长：`16384`
-- 最大像素数：`80 MP`
-
----
-
-## 9. UI 取向
-
-这个插件的设计方向是 **“极简工具化”**：
-
-- 用户几乎感知不到界面存在
-- 没有花哨弹窗
-- 没有首页
-- 没有仪表盘
-- 只有一个可靠的右键入口和一个很轻的设置页
-
-视觉建议：
-
-- 图标用黑白双色，偏工具感
-- 插件名直接覆盖当前功能边界，例如 `Image & Screenshot Save As`
-- options 页延续系统风格，低视觉噪音
-
----
-
-## 10. 首版实现范围
-
-建议 V1 范围：
-
-- Manifest V3
-- 图片右键菜单
-- 按 PNG/JPG/WebP 三种格式分组
-- 每组包含 `Save` / `Save & Copy Path`
-- 本地转码
-- 成功/失败通知
-- 最小 options 页面
-
-暂不做：
-
-- 批量保存
-- 自定义快捷键
-- 原图格式识别后智能推荐
-- 文件名规则可视化编辑器
-- 下载历史
-
----
-
-## 11. 后续实现建议
-
-按下面顺序推进最稳：
-
-1. 先做菜单、下载、通知主流程
-2. 再接本地转码
-3. 再接 `Save & Copy Path`
-
-这样可以先验证最关键的 “右键保存” 是否稳定，再补复制能力。
-
----
-
-## 12. 建议的英文商店短描述
-
-```text
-Save any web image as PNG, JPG, or WebP. All processing runs locally. No remote code.
-```
-
-## 13. 建议的中文一句话描述
-
-```text
-为网页图片增加右键另存为 PNG/JPG/WebP，并支持保存后复制路径或复制图片，全部本地执行。
-```
+- 动图只导出首帧；SVG 栅格化后输出
+- 某些站点策略可能阻止 `blob:` 或受保护图片读取
+- Chrome 应用商店禁止扩展脚本注入；后台直读失败时不再尝试注入，并对图片提取和整页截图返回稳定的本地化错误
+- Chrome 下载 API 只能写入默认下载目录及其子目录，不能直接写入任意系统图库目录
+- 整页截图依赖页面滚动和逐屏拼接，固定定位元素可能重复；页面在捕获期间发生布局变化也会影响结果
+- 超过画布安全阈值的输入直接失败，不自动降采样
