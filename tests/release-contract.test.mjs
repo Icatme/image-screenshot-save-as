@@ -86,3 +86,18 @@ test("every manifest localization token exists in the default catalog", async ()
     assert.ok(catalog[token], `missing default locale message: ${token}`);
   }
 });
+
+test("system notification icons resolve from the extension root", async () => {
+  const serviceWorker = await readFile(
+    path.join(repositoryRoot, "src/background/service-worker.js"),
+    "utf8",
+  );
+  assert.match(
+    serviceWorker,
+    /iconUrl:\s*chrome\.runtime\.getURL\("assets\/icons\/icon-128\.png"\)/,
+  );
+  assert.doesNotMatch(
+    serviceWorker,
+    /iconUrl:\s*"assets\/icons\/icon-128\.png"/,
+  );
+});

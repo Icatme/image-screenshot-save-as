@@ -3,6 +3,7 @@ import {
 	MAX_IMAGE_PIXELS,
 	MAX_SOURCE_IMAGE_BYTES,
 } from "./image-convert.js";
+import { isExtensionGalleryUrl } from "./page-access.js";
 
 const IMAGE_FETCH_TIMEOUT_MS = 25_000;
 
@@ -11,7 +12,7 @@ export async function readDataUrlBlob(dataUrl, t) {
 	return readResponseBlobWithLimit(response, MAX_SOURCE_IMAGE_BYTES, t);
 }
 
-export async function getSourceImageBlob(srcUrl, tabId, frameId, t) {
+export async function getSourceImageBlob(srcUrl, tabId, frameId, pageUrl, t) {
 	if (!srcUrl) {
 		throw new Error(t("errorNoImageUrl"));
 	}
@@ -24,6 +25,7 @@ export async function getSourceImageBlob(srcUrl, tabId, frameId, t) {
 				tabId,
 				srcUrl,
 				frameId,
+				pageUrl,
 				t,
 			);
 			if (fallbackBlob) {
@@ -45,7 +47,13 @@ export async function getSourceImageBlob(srcUrl, tabId, frameId, t) {
 	}
 
 	if (tabId != null) {
-		const fallbackBlob = await extractImageFromPage(tabId, srcUrl, frameId, t);
+		const fallbackBlob = await extractImageFromPage(
+			tabId,
+			srcUrl,
+			frameId,
+			pageUrl,
+			t,
+		);
 		if (fallbackBlob) {
 			return fallbackBlob;
 		}
@@ -114,7 +122,11 @@ async function fetchImageBlob(srcUrl, t) {
 	}
 }
 
-async function extractImageFromPage(tabId, srcUrl, frameId, t) {
+async function extractImageFromPage(tabId, srcUrl, frameId, pageUrl, t) {
+	if (isExtensionGalleryUrl(pageUrl)) {
+		throw new Error(t("errorExtensionGalleryRestricted"));
+	}
+
 	const target =
 		typeof frameId === "number" && frameId >= 0
 			? { tabId, frameIds: [frameId] }

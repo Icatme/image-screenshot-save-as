@@ -20,6 +20,7 @@ import {
 	getSourceImageBlob,
 	readDataUrlBlob,
 } from "../lib/image-source.js";
+import { isExtensionGalleryUrl } from "../lib/page-access.js";
 import { getSettings } from "../lib/settings.js";
 import {
 	isPagePreparedForScreenshot,
@@ -234,7 +235,7 @@ async function handleMenuClick(info, tab) {
 	}
 
 	if (command.kind === "screenshot") {
-		await handleScreenshotMenuClick(command, tab);
+		await handleScreenshotMenuClick(command, info, tab);
 		return;
 	}
 
@@ -250,6 +251,7 @@ async function handleImageMenuClick(command, info, tab) {
 		);
 		return;
 	}
+	const pageUrl = info.pageUrl || tab?.url;
 
 	try {
 		const settings = await getSettings();
@@ -258,6 +260,7 @@ async function handleImageMenuClick(command, info, tab) {
 			info.srcUrl,
 			tab?.id,
 			info.frameId,
+			pageUrl,
 			t,
 		);
 		const converted = await convertImageBlob(
@@ -292,7 +295,7 @@ async function handleImageMenuClick(command, info, tab) {
 	}
 }
 
-async function handleScreenshotMenuClick(command, tab) {
+async function handleScreenshotMenuClick(command, info, tab) {
 	if (tab?.id == null || tab?.windowId == null) {
 		await notify(
 			t("notifySaveFailedTitle"),
@@ -301,11 +304,20 @@ async function handleScreenshotMenuClick(command, tab) {
 		);
 		return;
 	}
+	const pageUrl = info.pageUrl || tab.url;
 
 	try {
-		await ensureFileSchemeAccess(tab.url, t);
+		await ensureFileSchemeAccess(pageUrl, t);
 	} catch (error) {
 		await notify(t("notifySaveFailedTitle"), getErrorMessage(error), "error");
+		return;
+	}
+	if (command.mode === "full-page" && isExtensionGalleryUrl(pageUrl)) {
+		await notify(
+			t("notifySaveFailedTitle"),
+			t("errorExtensionGalleryRestricted"),
+			"error",
+		);
 		return;
 	}
 
@@ -313,7 +325,7 @@ async function handleScreenshotMenuClick(command, tab) {
 		workerId: WORKER_INSTANCE_ID,
 		tabId: tab.id,
 		windowId: tab.windowId,
-		tabUrl: tab.url || "",
+		tabUrl: pageUrl || "",
 		startedAt: new Date().toISOString(),
 		pageState: null,
 	};
@@ -340,7 +352,7 @@ async function handleScreenshotMenuClick(command, tab) {
 				: await captureVisibleScreenshotBlob(tab, command.format, settings);
 		const downloadPath = buildScreenshotDownloadPath({
 			pageTitle: tab.title ?? "",
-			pageUrl: tab.url ?? "",
+			pageUrl: pageUrl ?? "",
 			mode: command.mode,
 			format: command.format,
 		});
@@ -1042,7 +1054,7 @@ async function notify(
 		}),
 		chrome.notifications.create(activityId, {
 			type: "basic",
-			iconUrl: "assets/icons/icon-128.png",
+			iconUrl: chrome.runtime.getURL("assets/icons/icon-128.png"),
 			title,
 			message,
 		}),
