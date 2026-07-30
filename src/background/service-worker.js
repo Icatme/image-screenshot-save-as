@@ -29,6 +29,10 @@ import {
 	scrollPageForScreenshot,
 } from "../lib/screenshot-page.js";
 import {
+	getScreenshotRegionPixels,
+	selectScreenshotRegion,
+} from "../lib/screenshot-region.js";
+import {
 	acquireScreenshotLease,
 	releaseScreenshotLease,
 	takeStaleScreenshotLease,
@@ -54,6 +58,7 @@ const CAPTURE_INTERVAL_MS = 550;
 const MAX_SCREENSHOT_EDGE = 32767;
 const MAX_SCREENSHOT_PIXELS = 100_000_000;
 const SCREENSHOT_RECOVERY_TIMEOUT_MS = 5 * 60 * 1000;
+const SCREENSHOT_SELECTION_TIMEOUT_MS = 2 * 60 * 1000;
 const WORKER_INSTANCE_ID = crypto.randomUUID();
 const downloadProcessingQueues = new Map();
 let activeLocaleOverride = null;
@@ -78,6 +83,7 @@ const ACTIONS = [
 
 const SCREENSHOT_MODES = [
 	{ id: "visible", titleKey: "menuScreenshotVisible" },
+	{ id: "region", titleKey: "menuScreenshotRegion" },
 	{ id: "full-page", titleKey: "menuScreenshotFullPage" },
 ];
 
@@ -312,10 +318,12 @@ async function handleScreenshotMenuClick(command, info, tab) {
 		await notify(t("notifySaveFailedTitle"), getErrorMessage(error), "error");
 		return;
 	}
-	if (command.mode === "full-page" && isExtensionGalleryUrl(pageUrl)) {
+	const requiresPageScript =
+		command.mode === "region" || command.mode === "full-page";
+	if (requiresPageScript && isExtensionGalleryUrl(pageUrl)) {
 		await notify(
 			t("notifySaveFailedTitle"),
-			t("errorExtensionGalleryRestricted"),
+			t("errorScreenshotScriptRestricted"),
 			"error",
 		);
 		return;
@@ -346,10 +354,30 @@ async function handleScreenshotMenuClick(command, info, tab) {
 	try {
 		const settings = await getSettings();
 		await refreshTranslations(settings);
-		const sourceBlob =
-			command.mode === "full-page"
-				? await captureFullPageScreenshotBlob(tab, command.format, settings)
-				: await captureVisibleScreenshotBlob(tab, command.format, settings);
+		let sourceBlob;
+		if (command.mode === "full-page") {
+			sourceBlob = await captureFullPageScreenshotBlob(
+				tab,
+				command.format,
+				settings,
+			);
+		} else if (command.mode === "region") {
+			sourceBlob = await captureRegionScreenshotBlob(
+				tab,
+				command.format,
+				settings,
+			);
+		} else {
+			sourceBlob = await captureVisibleScreenshotBlob(
+				tab,
+				command.format,
+				settings,
+			);
+		}
+
+		if (!sourceBlob) {
+			return;
+		}
 		const downloadPath = buildScreenshotDownloadPath({
 			pageTitle: tab.title ?? "",
 			pageUrl: pageUrl ?? "",
@@ -437,6 +465,59 @@ async function captureVisibleScreenshotBlob(tab, format, settings) {
 	const sourceBlob = await readDataUrlBlob(dataUrl, t);
 	const converted = await convertImageBlob(sourceBlob, format, settings);
 	return converted.blob;
+}
+
+async function captureRegionScreenshotBlob(tab, format, settings) {
+	const region = await executeTabFunction(tab.id, selectScreenshotRegion, [
+		{ instruction: t("screenshotRegionInstruction") },
+		SCREENSHOT_SELECTION_TIMEOUT_MS,
+	]);
+	if (!region || region.cancelled) {
+		return null;
+	}
+
+	const dataUrl = await captureVisibleTabDataUrl(tab);
+	const bitmap = await createImageBitmap(await readDataUrlBlob(dataUrl, t));
+
+	try {
+		const source = getScreenshotRegionPixels(
+			region,
+			bitmap.width,
+			bitmap.height,
+		);
+		if (!source) {
+			throw new Error(t("errorScreenshotEmpty"));
+		}
+
+		validateScreenshotSize(source.width, source.height);
+		const canvas = new OffscreenCanvas(source.width, source.height);
+		const context = canvas.getContext("2d", getCanvasContextOptions(format));
+		if (!context) {
+			throw new Error(t("errorCanvasUnavailable"));
+		}
+
+		prepareCanvasForEncoding(
+			context,
+			format,
+			source.width,
+			source.height,
+		);
+		context.drawImage(
+			bitmap,
+			source.x,
+			source.y,
+			source.width,
+			source.height,
+			0,
+			0,
+			source.width,
+			source.height,
+		);
+
+		return canvas.convertToBlob(getImageEncodeOptions(format, settings));
+	} finally {
+		bitmap.close();
+	}
 }
 
 async function captureFullPageScreenshotBlob(tab, format, settings) {

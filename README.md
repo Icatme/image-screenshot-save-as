@@ -7,7 +7,7 @@
 ## 功能
 
 - 图片右键：`Image Save As > PNG/JPG/WebP > Save / Save & Copy Path`
-- 页面右键：`Page Screenshot As > Visible Page/Full Page > PNG/JPG/WebP > Save / Save & Copy Path`
+- 页面右键：`Page Screenshot As > Visible Page/Select Area/Full Page > PNG/JPG/WebP > Save / Save & Copy Path`
 - JPG、WebP 导出质量设置；PNG 始终无损
 - 可选择每次显示系统“另存为”窗口，或静默保存到浏览器默认下载目录
 - 保存完成后可复制最终本地路径
@@ -49,7 +49,7 @@ npm run package:release
 npm run verify:release
 ```
 
-`test:browser` 会加载系统 Chrome 进行扩展启动、注入脚本和 WebP 透明度回归；`package:release` 生成确定性的解压目录与 ZIP，`verify:release` 校验源文件、解压目录和 ZIP 逐文件一致。
+`test:browser` 会加载系统 Chrome，验证区域选择的 Top Layer 覆盖、真实键鼠输入、截图裁剪和 WebP 透明度；`package:release` 生成确定性的解压目录与 ZIP，`verify:release` 校验源文件、解压目录和 ZIP 逐文件一致。
 
 ## 保存行为
 
@@ -68,7 +68,7 @@ npm run verify:release
 | `storage` | 保存设置、待处理下载状态、最近活动和保存历史 |
 | `notifications` | 在保存完成、复制失败或下载中断时显示系统通知 |
 | `offscreen`、`clipboardWrite` | 在 MV3 后台流程中复制最终路径，并管理临时 Blob URL |
-| `scripting`、`activeTab` | 仅在用户触发时读取当前页面截图尺寸、滚动页面或提取受限图片 |
+| `scripting`、`activeTab` | 仅在用户触发时选择截图区域、读取当前页面截图尺寸、滚动页面或提取受限图片 |
 | `http://*/*`、`https://*/*` | 读取用户右键选择的网络图片 |
 | `file:///*` | 在用户另行开启“允许访问文件网址”后处理本地页面 |
 
@@ -85,10 +85,11 @@ npm run verify:release
 ## 已知限制
 
 - 某些 `blob:` 图片或保护较强的站点可能阻止读取。
-- Chrome 禁止扩展在 Chrome 应用商店页面运行脚本，因此该页面不支持图片提取和整页截图；可见区域截图仍可使用。
+- Chrome 禁止扩展在 Chrome 应用商店页面运行脚本，因此该页面不支持图片提取、区域选择和整页截图；可见区域截图仍可使用。
 - 动图只导出首帧静态图；SVG 会栅格化后导出。
 - 普通图片转换限制为最大边长 `16384px`、最大 `80 MP`。
 - 单个压缩图片源限制为 `64 MiB`，超过上限会在解码前停止。
+- 区域选择只截取当前可视窗口内拖拽的矩形，不在拖拽时自动滚动页面；按 `Esc` 或右键可取消。
 - 整页截图通过滚动当前标签页逐屏拼接；截图期间切换标签页会中止，固定元素可能在拼接结果中重复。
 - 整页截图限制为最大边长 `32767px`、最大 `100 MP`。
 

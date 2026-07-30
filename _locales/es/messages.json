@@ -23,8 +23,14 @@
   "menuScreenshotVisible": {
     "message": "Página visible"
   },
+  "menuScreenshotRegion": {
+    "message": "Seleccionar área"
+  },
   "menuScreenshotFullPage": {
     "message": "Página completa"
+  },
+  "screenshotRegionInstruction": {
+    "message": "Arrastra para seleccionar un área. Pulsa Esc o haz clic derecho para cancelar."
   },
   "notifySaveFailedTitle": {
     "message": "Error al guardar"
@@ -40,6 +46,9 @@
   },
   "errorExtensionGalleryRestricted": {
     "message": "Chrome no permite que las extensiones ejecuten scripts en Chrome Web Store. Abre la imagen en una pestaña normal o usa una captura del área visible."
+  },
+  "errorScreenshotScriptRestricted": {
+    "message": "Chrome no permite seleccionar áreas ni capturar páginas completas en Chrome Web Store. Usa una captura del área visible."
   },
   "errorUnableReadFileImage": {
     "message": "No se pudo leer esta imagen local. Asegúrate de que la imagen sea visible en la página y de que la extensión tenga permitido acceder a URLs de archivo."

@@ -23,8 +23,14 @@
   "menuScreenshotVisible": {
     "message": "可視區域"
   },
+  "menuScreenshotRegion": {
+    "message": "選擇區域"
+  },
   "menuScreenshotFullPage": {
     "message": "整頁長截圖"
+  },
+  "screenshotRegionInstruction": {
+    "message": "拖曳選擇截圖區域。按 Esc 或右鍵取消。"
   },
   "notifySaveFailedTitle": {
     "message": "保存失敗"
@@ -40,6 +46,9 @@
   },
   "errorExtensionGalleryRestricted": {
     "message": "Chrome 不允許擴充功能在 Chrome 線上應用程式商店頁面中執行指令碼。請先在一般分頁開啟圖片，或改用可見區域截圖。"
+  },
+  "errorScreenshotScriptRestricted": {
+    "message": "Chrome 不允許擴充功能在 Chrome 線上應用程式商店頁面中選擇區域或進行整頁截圖。請改用可視區域截圖。"
   },
   "errorUnableReadFileImage": {
     "message": "無法讀取這張本地圖片。請確認圖片已在頁面中正常顯示，並且擴充功能已允許存取檔案網址。"

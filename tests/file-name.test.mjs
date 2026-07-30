@@ -39,7 +39,7 @@ test("buildDownloadPath falls back to a safe default and format", () => {
   );
 });
 
-test("buildScreenshotDownloadPath distinguishes full and visible captures", () => {
+test("buildScreenshotDownloadPath distinguishes screenshot modes", () => {
   assert.equal(
     buildScreenshotDownloadPath({
       pageTitle: "Quarterly report",
@@ -57,5 +57,14 @@ test("buildScreenshotDownloadPath distinguishes full and visible captures", () =
       format: "jpg",
     }),
     "release-notes-visible-screenshot.jpg",
+  );
+  assert.equal(
+    buildScreenshotDownloadPath({
+      pageTitle: "Dashboard",
+      pageUrl: "https://example.test/dashboard",
+      mode: "region",
+      format: "webp",
+    }),
+    "Dashboard-selected-area-screenshot.webp",
   );
 });

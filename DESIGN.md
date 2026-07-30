@@ -43,6 +43,9 @@ Page Screenshot As
 ├─ Visible Page
 │  └─ PNG / JPG / WebP
 │     └─ Save / Save & Copy Path
+├─ Select Area
+│  └─ PNG / JPG / WebP
+│     └─ Save / Save & Copy Path
 └─ Full Page
    └─ PNG / JPG / WebP
       └─ Save / Save & Copy Path
@@ -67,7 +70,7 @@ Page Screenshot As
 
 - 初始化和重建本地化右键菜单
 - 解析图片/截图菜单命令
-- 获取图片数据，协调可视区域或整页截图
+- 获取图片数据，协调可视区域、区域选择或整页截图
 - 调用图片转换、命名、下载和剪贴板模块
 - 跟踪下载完成/中断状态
 - 写入最近活动和保存历史
@@ -92,7 +95,7 @@ Page Screenshot As
 ### `src/lib/file-name.js`
 
 - 图片名依次取原图 URL 文件名、页面标题、`image`
-- 截图名由页面标题/URL 名称加 `visible-screenshot` 或 `full-page-screenshot` 后缀组成
+- 截图名由页面标题/URL 名称加 `visible-screenshot`、`selected-area-screenshot` 或 `full-page-screenshot` 后缀组成
 - 清理 Windows 非法字符和保留名，压缩空白，限制最终长度
 
 ### `src/lib/clipboard.js` 与 `src/offscreen/*`
@@ -103,10 +106,11 @@ MV3 service worker 没有可直接使用的 DOM 剪贴板和 Blob URL 生命周�
 - 将最终文件路径写入文本剪贴板
 - 仅在没有活跃操作和 Blob URL 时关闭文档，避免并发下载提前失效
 
-### `src/lib/capture-state.js`、`src/lib/screenshot-page.js` 与 `src/lib/storage-state.js`
+### `src/lib/capture-state.js`、`src/lib/screenshot-page.js`、`src/lib/screenshot-region.js` 与 `src/lib/storage-state.js`
 
 - `capture-state` 串行管理截图租约和跨 worker 的捕获速率时间戳
 - `screenshot-page` 保存、修改并恢复页面滚动状态；页面属性和超时恢复作为 worker 中断后的第二道保护
+- `screenshot-region` 在 Top Layer 的 `<dialog>` 内使用隔离 Shadow DOM 接收矩形选择，并按实际捕获位图尺寸换算裁剪坐标
 - `storage-state` 用每个 download ID 的独立会话键保存待处理状态，并串行、去重写入活动与历史
 
 ### `src/lib/settings.js` 与 `src/lib/i18n.js`
@@ -147,6 +151,13 @@ HTTP/HTTPS 图片由扩展后台读取。`data:`、`blob:`、`file:` 或后台�
 2. 调用 `chrome.tabs.captureVisibleTab`。
 3. 将捕获结果按目标格式转码，然后进入统一下载流程。
 
+### 选择区域
+
+1. 在当前页面临时注入隔离的区域选择覆盖层，阻止选择期间的页面滚动和指针事件。
+2. 用户拖拽矩形后移除覆盖层；`Esc`、右键、切换标签页或超时会取消，不创建下载。
+3. 调用 `chrome.tabs.captureVisibleTab`，按实际位图与 CSS 视口的比例换算坐标并裁剪。
+4. 按目标格式导出裁剪结果，然后进入统一下载流程。
+
 ### 整页
 
 1. 读取页面尺寸、原滚动位置和主要滚动容器。
@@ -184,7 +195,7 @@ HTTP/HTTPS 图片由扩展后台读取。`data:`、`blob:`、`file:` 或后台�
 - `storage`：设置、活动、历史和会话恢复
 - `notifications`：显示保存、复制和下载结果
 - `offscreen`、`clipboardWrite`：Blob URL 和路径复制
-- `scripting`、`activeTab`：仅在触发动作时读取/滚动当前页面
+- `scripting`、`activeTab`：仅在触发动作时选择区域或读取/滚动当前页面
 - `http://*/*`、`https://*/*`、`file:///*`：读取选中图片；文件协议仍由 Chrome 的用户开关控制
 
 安全约束：
@@ -198,7 +209,8 @@ HTTP/HTTPS 图片由扩展后台读取。`data:`、`blob:`、`file:` 或后台�
 
 - 动图只导出首帧；SVG 栅格化后输出
 - 某些站点策略可能阻止 `blob:` 或受保护图片读取
-- Chrome 应用商店禁止扩展脚本注入；后台直读失败时不再尝试注入，并对图片提取和整页截图返回稳定的本地化错误
+- Chrome 应用商店禁止扩展脚本注入；后台直读失败时不再尝试注入，并对图片提取、区域选择和整页截图返回稳定的本地化错误
 - Chrome 下载 API 只能写入默认下载目录及其子目录，不能直接写入任意系统图库目录
+- 区域选择限定在当前可视窗口，不提供跨滚动区域拖拽或自动滚动
 - 整页截图依赖页面滚动和逐屏拼接，固定定位元素可能重复；页面在捕获期间发生布局变化也会影响结果
 - 超过画布安全阈值的输入直接失败，不自动降采样

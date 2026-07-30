@@ -23,8 +23,14 @@
   "menuScreenshotVisible": {
     "message": "可视区域"
   },
+  "menuScreenshotRegion": {
+    "message": "选择区域"
+  },
   "menuScreenshotFullPage": {
     "message": "整页长截图"
+  },
+  "screenshotRegionInstruction": {
+    "message": "拖拽选择截图区域。按 Esc 或右键取消。"
   },
   "notifySaveFailedTitle": {
     "message": "保存失败"
@@ -40,6 +46,9 @@
   },
   "errorExtensionGalleryRestricted": {
     "message": "Chrome 不允许扩展在 Chrome 应用商店页面中运行脚本。请先在普通标签页打开图片，或改用可见区域截图。"
+  },
+  "errorScreenshotScriptRestricted": {
+    "message": "Chrome 不允许扩展在 Chrome 应用商店页面中选择区域或进行整页截图。请改用可视区域截图。"
   },
   "errorUnableReadFileImage": {
     "message": "无法读取这张本地图片。请确认图片已在页面中正常显示，并且扩展已允许访问文件网址。"

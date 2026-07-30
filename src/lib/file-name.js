@@ -36,7 +36,11 @@ export function buildScreenshotDownloadPath({ pageTitle, pageUrl, mode, format }
   const ext = normalizeExtension(format);
   const safeTitle = sanitizeSegment(pageTitle || "");
   const safePageName = sanitizeSegment(extractPageName(pageUrl) || "");
-  const suffix = mode === "full-page" ? "full-page-screenshot" : "visible-screenshot";
+  const suffix = mode === "full-page"
+    ? "full-page-screenshot"
+    : mode === "region"
+      ? "selected-area-screenshot"
+      : "visible-screenshot";
   const filenameStem = [safeTitle || safePageName || "page", suffix].join("-");
 
   return sanitizeFilename(`${filenameStem}.${ext}`, ext);

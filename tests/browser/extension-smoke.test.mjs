@@ -65,7 +65,7 @@ const skipReason = explicitSkip
     : "no Chrome/Chromium executable was found; set CHROME_PATH to run the smoke test";
 
 test(
-  "the unpacked extension loads in real Chrome and preserves WebP transparency",
+  "the unpacked extension handles trusted region input and preserves WebP transparency",
   { skip: skipReason, timeout: 45_000 },
   async () => {
     assert.ok(
@@ -74,9 +74,67 @@ test(
     );
     const server = createServer((_request, response) => {
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-      response.end(
-        "<!doctype html><html><body style='height:2400px'>capture target</body></html>",
-      );
+      response.end(`<!doctype html>
+<html>
+  <head>
+    <style>
+      html, body { margin: 0; }
+      body { min-height: 2400px; }
+      dialog:not(#page-dialog) {
+        opacity: 0 !important;
+        pointer-events: none !important;
+        transform: scale(0.1) !important;
+      }
+      #capture-target {
+        position: fixed;
+        left: 20px;
+        top: 30px;
+        width: 100px;
+        height: 70px;
+        background: rgb(12, 200, 80);
+      }
+      #page-dialog {
+        position: fixed;
+        left: 240px;
+        top: 160px;
+        width: 320px;
+        height: 220px;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="img-save-as-region-selector" data-page-owned-region-selector hidden>Page-owned element</div>
+    <div id="capture-target"></div>
+    <dialog id="page-dialog"><button autofocus>Page modal</button></dialog>
+    <script>
+      window.captureEventCounts = {
+        auxclick: 0,
+        click: 0,
+        contextmenu: 0,
+        keydown: 0,
+        keyup: 0,
+      };
+      for (const eventName of Object.keys(window.captureEventCounts)) {
+        window.addEventListener(eventName, () => {
+          window.captureEventCounts[eventName] += 1;
+        });
+      }
+      window.capturePointerBlockerCounts = {
+        pointerdown: 0,
+        pointermove: 0,
+        pointerup: 0,
+      };
+      for (const eventName of Object.keys(window.capturePointerBlockerCounts)) {
+        window.addEventListener(eventName, (event) => {
+          window.capturePointerBlockerCounts[eventName] += 1;
+          event.stopPropagation();
+        }, true);
+      }
+      document.getElementById("page-dialog").showModal();
+    </script>
+  </body>
+</html>`);
     });
     await new Promise((resolve, reject) => {
       server.once("error", reject);
@@ -196,55 +254,355 @@ test(
       });
 
       const serverAddress = server.address();
+      const targetUrl = `http://127.0.0.1:${serverAddress.port}/capture`;
       const injectedRecoveryCheck = await page.evaluate(
         async (targetUrl) => {
           const tab = await chrome.tabs.create({ url: targetUrl, active: true });
-          try {
-            while ((await chrome.tabs.get(tab.id)).status !== "complete") {
-              await new Promise((resolve) => setTimeout(resolve, 20));
-            }
+          while ((await chrome.tabs.get(tab.id)).status !== "complete") {
+            await new Promise((resolve) => setTimeout(resolve, 20));
+          }
 
-            const { preparePageForScreenshot, restorePageAfterScreenshot } =
-              await import(chrome.runtime.getURL("src/lib/screenshot-page.js"));
-            const [prepared] = await chrome.scripting.executeScript({
-              target: { tabId: tab.id },
-              func: preparePageForScreenshot,
-              args: [10_000],
+          const { preparePageForScreenshot, restorePageAfterScreenshot } =
+            await import(chrome.runtime.getURL("src/lib/screenshot-page.js"));
+          const { selectScreenshotRegion } = await import(
+            chrome.runtime.getURL("src/lib/screenshot-region.js")
+          );
+          const [prepared] = await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: preparePageForScreenshot,
+            args: [10_000],
+          });
+          const [markerDuring] = await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: () =>
+              document.documentElement.hasAttribute(
+                "data-img-save-as-capture-recovery",
+              ),
+          });
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: restorePageAfterScreenshot,
+            args: [prepared.result],
+          });
+          const [markerAfter] = await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: () =>
+              document.documentElement.hasAttribute(
+                "data-img-save-as-capture-recovery",
+              ),
+          });
+
+          window.regionSelectionPromise = chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: selectScreenshotRegion,
+            args: [{ instruction: "Select a region" }, 10_000],
+          });
+          window.regionSelectionTabId = tab.id;
+          return {
+            tabId: tab.id,
+            stateAvailable: Boolean(prepared.result?.viewportHeight),
+            markerDuring: markerDuring.result,
+            markerAfter: markerAfter.result,
+          };
+        },
+        targetUrl,
+      );
+      assert.ok(Number.isInteger(injectedRecoveryCheck.tabId));
+      assert.deepEqual(
+        {
+          stateAvailable: injectedRecoveryCheck.stateAvailable,
+          markerDuring: injectedRecoveryCheck.markerDuring,
+          markerAfter: injectedRecoveryCheck.markerAfter,
+        },
+        {
+          stateAvailable: true,
+          markerDuring: true,
+          markerAfter: false,
+        },
+      );
+
+      const capturePage = await browser.waitForTarget(
+        (target) => target.type() === "page" && target.url() === targetUrl,
+        { timeout: 10_000 },
+      ).then((target) => target.page());
+      assert.ok(capturePage, "the capture target tab must be available");
+      capturePage.on("pageerror", (error) => pageErrors.push(error.message));
+      await capturePage.bringToFront();
+      await capturePage.waitForSelector(
+        'dialog[id^="img-save-as-region-selector"]',
+      );
+
+      const topLayerCheck = await capturePage.evaluate(() => {
+        const overlay = document.querySelector(
+          'dialog[id^="img-save-as-region-selector"]',
+        );
+        const pageOwnedElement = document.querySelector(
+          "[data-page-owned-region-selector]",
+        );
+        const pageDialog = document.getElementById("page-dialog");
+        return {
+          overlayIsDialog: overlay instanceof HTMLDialogElement,
+          overlayIsTopmost: document.elementFromPoint(320, 220) === overlay,
+          overlayAvoidedIdCollision: overlay?.id !== pageOwnedElement?.id,
+          pageOwnedElementSurvived: Boolean(pageOwnedElement?.isConnected),
+          pageDialogIsModal: pageDialog.matches(":modal"),
+        };
+      });
+      assert.deepEqual(topLayerCheck, {
+        overlayIsDialog: true,
+        overlayIsTopmost: true,
+        overlayAvoidedIdCollision: true,
+        pageOwnedElementSurvived: true,
+        pageDialogIsModal: true,
+      });
+
+      await capturePage.evaluate(() => window.scrollTo(0, 0));
+      await capturePage.keyboard.press("ArrowDown");
+      await capturePage.keyboard.press("PageDown");
+      await capturePage.evaluate(
+        () => new Promise((resolve) => requestAnimationFrame(resolve)),
+      );
+      assert.deepEqual(
+        await capturePage.evaluate(() => ({
+          keydown: window.captureEventCounts.keydown,
+          keyup: window.captureEventCounts.keyup,
+          scrollY: window.scrollY,
+        })),
+        { keydown: 0, keyup: 0, scrollY: 0 },
+      );
+
+      await capturePage.mouse.click(320, 220, { button: "right" });
+      const rightClickResult = await page.evaluate(async () => {
+        const [selection] = await window.regionSelectionPromise;
+        delete window.regionSelectionPromise;
+        return selection.result;
+      });
+      assert.deepEqual(rightClickResult, { cancelled: true });
+      assert.deepEqual(
+        await capturePage.evaluate(() => ({
+          auxclick: window.captureEventCounts.auxclick,
+          contextmenu: window.captureEventCounts.contextmenu,
+          overlayExists: Boolean(
+            document.querySelector(
+              'dialog[id^="img-save-as-region-selector"]',
+            ),
+          ),
+          pageOwnedElementExists: Boolean(
+            document.querySelector("[data-page-owned-region-selector]"),
+          ),
+        })),
+        {
+          auxclick: 0,
+          contextmenu: 0,
+          overlayExists: false,
+          pageOwnedElementExists: true,
+        },
+      );
+
+      const captureSession = await capturePage.createCDPSession();
+      await captureSession.send("Emulation.setPageScaleFactor", {
+        pageScaleFactor: 2,
+      });
+      await capturePage.evaluate(
+        () =>
+          new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve)),
+          ),
+      );
+      const zoomedViewport = await capturePage.evaluate(() => ({
+        width: visualViewport.width,
+        height: visualViewport.height,
+        scale: visualViewport.scale,
+      }));
+      assert.equal(zoomedViewport.scale, 2);
+
+      await page.evaluate(async () => {
+        const { selectScreenshotRegion } = await import(
+          chrome.runtime.getURL("src/lib/screenshot-region.js")
+        );
+        window.regionSelectionPromise = chrome.scripting.executeScript({
+          target: { tabId: window.regionSelectionTabId },
+          func: selectScreenshotRegion,
+          args: [{ instruction: "Select a region" }, 10_000],
+        });
+      });
+      await capturePage.evaluate(() => {
+        document.getElementById("page-dialog").close();
+      });
+      await capturePage.waitForSelector(
+        'dialog[id^="img-save-as-region-selector"]',
+      );
+      await capturePage.mouse.move(20, 30);
+      await capturePage.mouse.down();
+      await capturePage.mouse.move(120, 100);
+      await capturePage.mouse.up();
+
+      const selectedRegion = await page.evaluate(async () => {
+        const [selection] = await window.regionSelectionPromise;
+        delete window.regionSelectionPromise;
+        return selection.result;
+      });
+      assert.deepEqual(
+        {
+          x: selectedRegion.x,
+          y: selectedRegion.y,
+          width: selectedRegion.width,
+          height: selectedRegion.height,
+          viewportWidth: selectedRegion.viewportWidth,
+          viewportHeight: selectedRegion.viewportHeight,
+        },
+        {
+          x: 20,
+          y: 30,
+          width: 100,
+          height: 70,
+          viewportWidth: zoomedViewport.width,
+          viewportHeight: zoomedViewport.height,
+        },
+      );
+      const pointerBlockerCounts = await capturePage.evaluate(
+        () => window.capturePointerBlockerCounts,
+      );
+      assert.ok(pointerBlockerCounts.pointerdown >= 2);
+      assert.ok(pointerBlockerCounts.pointermove >= 1);
+      assert.ok(pointerBlockerCounts.pointerup >= 2);
+      assert.deepEqual(
+        await capturePage.evaluate(() => ({
+          click: window.captureEventCounts.click,
+          overlayExists: Boolean(
+            document.querySelector(
+              'dialog[id^="img-save-as-region-selector"]',
+            ),
+          ),
+          pageOwnedElementExists: Boolean(
+            document.querySelector("[data-page-owned-region-selector]"),
+          ),
+        })),
+        { click: 0, overlayExists: false, pageOwnedElementExists: true },
+      );
+
+      const capturedPng = await capturePage.screenshot({
+        type: "png",
+        encoding: "base64",
+      });
+      const cropCheck = await page.evaluate(
+        async ({ dataUrl, region }) => {
+          const bitmap = await createImageBitmap(
+            await (await fetch(dataUrl)).blob(),
+          );
+          try {
+            const { getScreenshotRegionPixels } = await import(
+              chrome.runtime.getURL("src/lib/screenshot-region.js")
+            );
+            const source = getScreenshotRegionPixels(
+              region,
+              bitmap.width,
+              bitmap.height,
+            );
+            const canvas = new OffscreenCanvas(source.width, source.height);
+            const context = canvas.getContext("2d", {
+              alpha: true,
+              willReadFrequently: true,
             });
-            const [markerDuring] = await chrome.scripting.executeScript({
-              target: { tabId: tab.id },
-              func: () =>
-                document.documentElement.hasAttribute(
-                  "data-img-save-as-capture-recovery",
-                ),
-            });
-            await chrome.scripting.executeScript({
-              target: { tabId: tab.id },
-              func: restorePageAfterScreenshot,
-              args: [prepared.result],
-            });
-            const [markerAfter] = await chrome.scripting.executeScript({
-              target: { tabId: tab.id },
-              func: () =>
-                document.documentElement.hasAttribute(
-                  "data-img-save-as-capture-recovery",
-                ),
-            });
+            context.drawImage(
+              bitmap,
+              source.x,
+              source.y,
+              source.width,
+              source.height,
+              0,
+              0,
+              source.width,
+              source.height,
+            );
+            const pixelAt = (x, y) => [
+              ...context.getImageData(x, y, 1, 1).data,
+            ];
+            const sampledPixels = [
+              pixelAt(1, 1),
+              pixelAt(source.width - 2, 1),
+              pixelAt(1, source.height - 2),
+              pixelAt(source.width - 2, source.height - 2),
+              pixelAt(
+                Math.floor(source.width / 2),
+                Math.floor(source.height / 2),
+              ),
+            ];
+            const blob = await canvas.convertToBlob({ type: "image/png" });
             return {
-              stateAvailable: Boolean(prepared.result?.viewportHeight),
-              markerDuring: markerDuring.result,
-              markerAfter: markerAfter.result,
+              width: source.width,
+              height: source.height,
+              mimeType: blob.type,
+              sampledPixels,
             };
           } finally {
-            await chrome.tabs.remove(tab.id);
+            bitmap.close();
           }
         },
-        `http://127.0.0.1:${serverAddress.port}/capture`,
+        {
+          dataUrl: `data:image/png;base64,${capturedPng}`,
+          region: selectedRegion,
+        },
       );
-      assert.deepEqual(injectedRecoveryCheck, {
-        stateAvailable: true,
-        markerDuring: true,
-        markerAfter: false,
+      assert.deepEqual(cropCheck, {
+        width: 200,
+        height: 140,
+        mimeType: "image/png",
+        sampledPixels: Array.from(
+          { length: 5 },
+          () => [12, 200, 80, 255],
+        ),
+      });
+
+      await captureSession.send("Emulation.setPageScaleFactor", {
+        pageScaleFactor: 1,
+      });
+      await captureSession.detach();
+
+      await page.evaluate(async () => {
+        const { selectScreenshotRegion } = await import(
+          chrome.runtime.getURL("src/lib/screenshot-region.js")
+        );
+        window.regionSelectionPromise = chrome.scripting.executeScript({
+          target: { tabId: window.regionSelectionTabId },
+          func: selectScreenshotRegion,
+          args: [{ instruction: "Select a region" }, 10_000],
+        });
+      });
+      await capturePage.waitForSelector(
+        'dialog[id^="img-save-as-region-selector"]',
+      );
+      await capturePage.keyboard.press("Escape");
+      const escapeResult = await page.evaluate(async () => {
+        const [selection] = await window.regionSelectionPromise;
+        delete window.regionSelectionPromise;
+        return selection.result;
+      });
+      assert.deepEqual(escapeResult, { cancelled: true });
+      assert.deepEqual(
+        await capturePage.evaluate(() => ({
+          keydown: window.captureEventCounts.keydown,
+          keyup: window.captureEventCounts.keyup,
+          overlayExists: Boolean(
+            document.querySelector(
+              'dialog[id^="img-save-as-region-selector"]',
+            ),
+          ),
+          pageOwnedElementExists: Boolean(
+            document.querySelector("[data-page-owned-region-selector]"),
+          ),
+        })),
+        {
+          keydown: 0,
+          keyup: 0,
+          overlayExists: false,
+          pageOwnedElementExists: true,
+        },
+      );
+
+      await page.evaluate(async () => {
+        await chrome.tabs.remove(window.regionSelectionTabId);
+        delete window.regionSelectionTabId;
       });
 
       const result = await page.evaluate(async () => {
