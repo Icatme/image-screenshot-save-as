@@ -1,5 +1,8 @@
 const blobUrls = new Set();
 const blobUploads = new Map();
+const blobUrlReaperTimeouts = new Map();
+const BLOB_URL_REAP_CHECK_DELAY_MS = 5 * 60 * 1000;
+const BLOB_URL_REAP_RETRY_MS = 30 * 60 * 1000;
 const OFFSCREEN_MESSAGE_TYPES = new Set([
   "WRITE_TEXT",
   "BEGIN_BLOB_URL",
@@ -95,7 +98,7 @@ async function handleMessage(message) {
 
     const blob = new Blob(upload.chunks, { type: upload.mimeType });
     const url = URL.createObjectURL(blob);
-    blobUrls.add(url);
+    trackBlobUrl(url);
     blobUploads.delete(message.uploadId);
     return { ok: true, url };
   }
@@ -109,15 +112,69 @@ async function handleMessage(message) {
   }
 
   if (message?.type === "REVOKE_BLOB_URL") {
-    if (message.url && blobUrls.has(message.url)) {
-      URL.revokeObjectURL(message.url);
-      blobUrls.delete(message.url);
-    }
+    revokeTrackedBlobUrl(message.url);
 
     return { ok: true };
   }
 
   return { ok: false, error: "Unknown offscreen message." };
+}
+
+function trackBlobUrl(url) {
+  blobUrls.add(url);
+  scheduleBlobUrlReapCheck(url, BLOB_URL_REAP_CHECK_DELAY_MS);
+}
+
+function scheduleBlobUrlReapCheck(url, delay) {
+  if (!blobUrls.has(url)) {
+    return;
+  }
+
+  const timeoutId = setTimeout(() => {
+    blobUrlReaperTimeouts.delete(url);
+    void requestBlobUrlReap(url);
+  }, delay);
+  blobUrlReaperTimeouts.set(url, timeoutId);
+}
+
+async function requestBlobUrlReap(url) {
+  if (!blobUrls.has(url)) {
+    return;
+  }
+
+  let response;
+  try {
+    response = await chrome.runtime.sendMessage({
+      type: "CAN_REAP_BLOB_URL",
+      url,
+    });
+  } catch {
+    response = null;
+  }
+
+  if (!response?.ok || !response.reap) {
+    scheduleBlobUrlReapCheck(url, BLOB_URL_REAP_RETRY_MS);
+    return;
+  }
+
+  revokeTrackedBlobUrl(url);
+  await chrome.runtime
+    .sendMessage({ type: "BLOB_URL_REAPED", url })
+    .catch(() => {});
+}
+
+function revokeTrackedBlobUrl(url) {
+  if (!url || !blobUrls.has(url)) {
+    return;
+  }
+
+  const timeoutId = blobUrlReaperTimeouts.get(url);
+  if (timeoutId !== undefined) {
+    clearTimeout(timeoutId);
+    blobUrlReaperTimeouts.delete(url);
+  }
+  URL.revokeObjectURL(url);
+  blobUrls.delete(url);
 }
 
 function getBlobUpload(uploadId) {

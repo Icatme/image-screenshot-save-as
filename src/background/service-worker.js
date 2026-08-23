@@ -1,4 +1,5 @@
 import {
+	closeOffscreenDocumentIfIdle,
 	copyTextToClipboard,
 	createBlobUrl,
 	revokeBlobUrl,
@@ -59,6 +60,11 @@ const MAX_SCREENSHOT_EDGE = 32767;
 const MAX_SCREENSHOT_PIXELS = 100_000_000;
 const SCREENSHOT_RECOVERY_TIMEOUT_MS = 5 * 60 * 1000;
 const SCREENSHOT_SELECTION_TIMEOUT_MS = 2 * 60 * 1000;
+const PARTIAL_CAPTURE_REASONS = Object.freeze({
+	SCROLL_STALLED: "scroll_stalled",
+	TAB_CHANGED: "tab_changed",
+	CAPTURE_FAILED: "capture_failed",
+});
 const WORKER_INSTANCE_ID = crypto.randomUUID();
 const downloadProcessingQueues = new Map();
 let activeLocaleOverride = null;
@@ -69,6 +75,14 @@ let captureCallQueue = Promise.resolve();
 let contextMenuUpdateQueue = Promise.resolve();
 let badgeResetTimeoutId = null;
 let runtimeReadyPromise = null;
+
+class RecoverableScreenshotError extends Error {
+	constructor(reason, message) {
+		super(message);
+		this.name = "RecoverableScreenshotError";
+		this.partialReason = reason;
+	}
+}
 
 const FORMATS = [
 	{ id: "png", title: "PNG" },
@@ -116,16 +130,34 @@ chrome.action.onClicked.addListener(() => {
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-	if (message?.type !== "CLEAR_SAVE_HISTORY") {
-		return false;
+	if (message?.type === "CAN_REAP_BLOB_URL") {
+		void canReapBlobUrl(message.url)
+			.then((reap) => sendResponse({ ok: true, reap }))
+			.catch((error) => {
+				sendResponse({ ok: false, error: getErrorMessage(error) });
+			});
+		return true;
 	}
 
-	void clearSaveHistory()
-		.then(() => sendResponse({ ok: true }))
-		.catch((error) => {
-			sendResponse({ ok: false, error: getErrorMessage(error) });
-		});
-	return true;
+	if (message?.type === "BLOB_URL_REAPED") {
+		void acknowledgeReapedBlobUrl(message.url)
+			.then(() => sendResponse({ ok: true }))
+			.catch((error) => {
+				sendResponse({ ok: false, error: getErrorMessage(error) });
+			});
+		return true;
+	}
+
+	if (message?.type === "CLEAR_SAVE_HISTORY") {
+		void clearSaveHistory()
+			.then(() => sendResponse({ ok: true }))
+			.catch((error) => {
+				sendResponse({ ok: false, error: getErrorMessage(error) });
+			});
+		return true;
+	}
+
+	return false;
 });
 
 void ensureRuntimeReady().catch(reportBackgroundError);
@@ -156,7 +188,9 @@ async function initializeRuntime() {
 	await setTrustedStorageAccess();
 	await refreshTranslations();
 	await recoverStaleScreenshotLease();
-	await recoverPendingDownloads();
+	await recoverPendingDownloads().catch((error) => {
+		console.error("Failed to recover pending downloads.", error);
+	});
 }
 
 function createContextMenus() {
@@ -355,12 +389,21 @@ async function handleScreenshotMenuClick(command, info, tab) {
 		const settings = await getSettings();
 		await refreshTranslations(settings);
 		let sourceBlob;
+		let partialCapture = false;
+		let partialReason = "";
+		let capturedHeight = 0;
+		let totalHeight = 0;
 		if (command.mode === "full-page") {
-			sourceBlob = await captureFullPageScreenshotBlob(
+			const captureResult = await captureFullPageScreenshotBlob(
 				tab,
 				command.format,
 				settings,
 			);
+			sourceBlob = captureResult.blob;
+			partialCapture = captureResult.partial;
+			partialReason = captureResult.partialReason;
+			capturedHeight = captureResult.capturedHeight;
+			totalHeight = captureResult.totalHeight;
 		} else if (command.mode === "region") {
 			sourceBlob = await captureRegionScreenshotBlob(
 				tab,
@@ -383,6 +426,7 @@ async function handleScreenshotMenuClick(command, info, tab) {
 			pageUrl: pageUrl ?? "",
 			mode: command.mode,
 			format: command.format,
+			partial: partialCapture,
 		});
 		const downloadResult = await downloadBlob(
 			sourceBlob,
@@ -396,6 +440,10 @@ async function handleScreenshotMenuClick(command, info, tab) {
 			action: command.action,
 			captureType: "screenshot",
 			screenshotMode: command.mode,
+			partialCapture,
+			partialReason,
+			capturedHeight,
+			totalHeight,
 			format: command.format,
 			requestedPath: downloadPath,
 			objectUrl: downloadResult.objectUrl,
@@ -526,6 +574,9 @@ async function captureFullPageScreenshotBlob(tab, format, settings) {
 	let context = null;
 	let scaleY = 1;
 	let capturedCssHeight = 0;
+	let paintedHeight = 0;
+	let partial = false;
+	let partialReason = "";
 
 	try {
 		const prepared = await executeTabFunctionWithMetadata(
@@ -601,6 +652,12 @@ async function captureFullPageScreenshotBlob(tab, format, settings) {
 				}
 
 				const actualScrollY = Number(scrollState?.scrollY) || 0;
+				if (actualScrollY > capturedCssHeight + 1) {
+					throw new RecoverableScreenshotError(
+						PARTIAL_CAPTURE_REASONS.SCROLL_STALLED,
+						t("errorScreenshotScrollStalled"),
+					);
+				}
 				const cropTopCss = Math.max(0, capturedCssHeight - actualScrollY);
 				const drawableCssHeight = Math.min(
 					pageState.viewportHeight - cropTopCss,
@@ -608,7 +665,10 @@ async function captureFullPageScreenshotBlob(tab, format, settings) {
 				);
 
 				if (drawableCssHeight <= 0) {
-					throw new Error(t("errorScreenshotScrollStalled"));
+					throw new RecoverableScreenshotError(
+						PARTIAL_CAPTURE_REASONS.SCROLL_STALLED,
+						t("errorScreenshotScrollStalled"),
+					);
 				}
 
 				const sourceY = Math.round(cropTopCss * scaleY);
@@ -620,7 +680,10 @@ async function captureFullPageScreenshotBlob(tab, format, settings) {
 				const targetHeight = Math.min(sourceHeight, canvas.height - targetY);
 
 				if (targetHeight <= 0) {
-					throw new Error(t("errorScreenshotScrollStalled"));
+					throw new RecoverableScreenshotError(
+						PARTIAL_CAPTURE_REASONS.SCROLL_STALLED,
+						t("errorScreenshotScrollStalled"),
+					);
 				}
 
 				context.drawImage(
@@ -635,13 +698,18 @@ async function captureFullPageScreenshotBlob(tab, format, settings) {
 					targetHeight,
 				);
 
+				paintedHeight = Math.max(paintedHeight, targetY + targetHeight);
 				capturedCssHeight += drawableCssHeight;
 			} finally {
 				bitmap.close();
 			}
 		}
-
-		return canvas.convertToBlob(getImageEncodeOptions(format, settings));
+	} catch (error) {
+		partialReason = getPartialCaptureReason(error);
+		if (!canvas || paintedHeight <= 0 || !partialReason) {
+			throw error;
+		}
+		partial = true;
 	} finally {
 		if (pageState) {
 			await executeTabFunction(
@@ -652,6 +720,15 @@ async function captureFullPageScreenshotBlob(tab, format, settings) {
 			).catch(() => {});
 		}
 	}
+
+	return encodeScreenshotCapture({
+		canvas,
+		format,
+		settings,
+		partial,
+		partialReason,
+		paintedHeight,
+	});
 }
 
 async function captureScrollableElementScreenshotBlob(
@@ -664,117 +741,221 @@ async function captureScrollableElementScreenshotBlob(
 	let context = null;
 	let scaleY = 1;
 	let capturedElementContentHeight = 0;
+	let paintedHeight = 0;
+	let partial = false;
+	let partialReason = "";
 
-	while (capturedElementContentHeight < pageState.elementScrollHeight) {
-		const requestedScrollY = Math.min(
-			capturedElementContentHeight,
-			pageState.maxScrollY,
-		);
-		const scrollState = await executeTabFunction(
-			tab.id,
-			scrollPageForScreenshot,
-			[pageState, requestedScrollY],
-			pageState.documentId,
-		);
-		ensureScreenshotDocumentUnchanged(scrollState);
-		const dataUrl = await captureVisibleTabDataUrl(tab);
-		await ensureScreenshotPageCurrent(tab.id, pageState);
-		const bitmap = await createImageBitmap(await readDataUrlBlob(dataUrl, t));
+	try {
+		while (capturedElementContentHeight < pageState.elementScrollHeight) {
+			const requestedScrollY = Math.min(
+				capturedElementContentHeight,
+				pageState.maxScrollY,
+			);
+			const scrollState = await executeTabFunction(
+				tab.id,
+				scrollPageForScreenshot,
+				[pageState, requestedScrollY],
+				pageState.documentId,
+			);
+			ensureScreenshotDocumentUnchanged(scrollState);
+			const dataUrl = await captureVisibleTabDataUrl(tab);
+			await ensureScreenshotPageCurrent(tab.id, pageState);
+			const bitmap = await createImageBitmap(await readDataUrlBlob(dataUrl, t));
 
-		try {
-			if (!canvas) {
-				const scaleX = bitmap.width / pageState.viewportWidth;
-				scaleY = bitmap.height / pageState.viewportHeight;
-				const outputWidth = Math.round(pageState.viewportWidth * scaleX);
-				const outputHeight = Math.round(pageState.pageHeight * scaleY);
+			try {
+				if (!canvas) {
+					const scaleX = bitmap.width / pageState.viewportWidth;
+					scaleY = bitmap.height / pageState.viewportHeight;
+					const outputWidth = Math.round(pageState.viewportWidth * scaleX);
+					const outputHeight = Math.round(pageState.pageHeight * scaleY);
 
-				validateScreenshotSize(outputWidth, outputHeight);
-				canvas = new OffscreenCanvas(outputWidth, outputHeight);
-				context = canvas.getContext("2d", getCanvasContextOptions(format));
+					validateScreenshotSize(outputWidth, outputHeight);
+					canvas = new OffscreenCanvas(outputWidth, outputHeight);
+					context = canvas.getContext("2d", getCanvasContextOptions(format));
 
-				if (!context) {
-					throw new Error(t("errorCanvasUnavailable"));
+					if (!context) {
+						throw new Error(t("errorCanvasUnavailable"));
+					}
+
+					prepareCanvasForEncoding(
+						context,
+						format,
+						outputWidth,
+						outputHeight,
+					);
 				}
 
-				prepareCanvasForEncoding(
-					context,
-					format,
-					outputWidth,
-					outputHeight,
-				);
-			}
+				if (capturedElementContentHeight === 0) {
+					const firstTargetHeight = Math.min(bitmap.height, canvas.height);
+					context.drawImage(
+						bitmap,
+						0,
+						0,
+						bitmap.width,
+						firstTargetHeight,
+						0,
+						0,
+						canvas.width,
+						firstTargetHeight,
+					);
+					paintedHeight = firstTargetHeight;
+					capturedElementContentHeight = Math.min(
+						pageState.elementViewportHeight,
+						pageState.elementScrollHeight,
+					);
+					continue;
+				}
 
-			if (capturedElementContentHeight === 0) {
+				const actualScrollY = Number(scrollState?.scrollY) || 0;
+				if (actualScrollY > capturedElementContentHeight + 1) {
+					throw new RecoverableScreenshotError(
+						PARTIAL_CAPTURE_REASONS.SCROLL_STALLED,
+						t("errorScreenshotScrollStalled"),
+					);
+				}
+				const cropTopInElementCss = Math.max(
+					0,
+					capturedElementContentHeight - actualScrollY,
+				);
+				const drawableCssHeight = Math.min(
+					pageState.elementViewportHeight - cropTopInElementCss,
+					pageState.elementScrollHeight - capturedElementContentHeight,
+				);
+
+				if (drawableCssHeight <= 0) {
+					throw new RecoverableScreenshotError(
+						PARTIAL_CAPTURE_REASONS.SCROLL_STALLED,
+						t("errorScreenshotScrollStalled"),
+					);
+				}
+
+				const sourceY = Math.round(
+					(pageState.elementTop + cropTopInElementCss) * scaleY,
+				);
+				const sourceHeight = Math.min(
+					bitmap.height - sourceY,
+					Math.round(drawableCssHeight * scaleY),
+				);
+				const targetY = Math.round(
+					(pageState.viewportHeight +
+						capturedElementContentHeight -
+						pageState.elementViewportHeight) *
+						scaleY,
+				);
+				const targetHeight = Math.min(sourceHeight, canvas.height - targetY);
+
+				if (targetHeight <= 0) {
+					throw new RecoverableScreenshotError(
+						PARTIAL_CAPTURE_REASONS.SCROLL_STALLED,
+						t("errorScreenshotScrollStalled"),
+					);
+				}
+
 				context.drawImage(
 					bitmap,
 					0,
-					0,
+					sourceY,
 					bitmap.width,
-					bitmap.height,
+					targetHeight,
 					0,
-					0,
+					targetY,
 					canvas.width,
-					bitmap.height,
+					targetHeight,
 				);
-				capturedElementContentHeight = Math.min(
-					pageState.elementViewportHeight,
-					pageState.elementScrollHeight,
-				);
-				continue;
+
+				paintedHeight = Math.max(paintedHeight, targetY + targetHeight);
+				capturedElementContentHeight += drawableCssHeight;
+			} finally {
+				bitmap.close();
 			}
-
-			const actualScrollY = Number(scrollState?.scrollY) || 0;
-			const cropTopInElementCss = Math.max(
-				0,
-				capturedElementContentHeight - actualScrollY,
-			);
-			const drawableCssHeight = Math.min(
-				pageState.elementViewportHeight - cropTopInElementCss,
-				pageState.elementScrollHeight - capturedElementContentHeight,
-			);
-
-			if (drawableCssHeight <= 0) {
-				throw new Error(t("errorScreenshotScrollStalled"));
-			}
-
-			const sourceY = Math.round(
-				(pageState.elementTop + cropTopInElementCss) * scaleY,
-			);
-			const sourceHeight = Math.min(
-				bitmap.height - sourceY,
-				Math.round(drawableCssHeight * scaleY),
-			);
-			const targetY = Math.round(
-				(pageState.viewportHeight +
-					capturedElementContentHeight -
-					pageState.elementViewportHeight) *
-					scaleY,
-			);
-			const targetHeight = Math.min(sourceHeight, canvas.height - targetY);
-
-			if (targetHeight <= 0) {
-				throw new Error(t("errorScreenshotScrollStalled"));
-			}
-
-			context.drawImage(
-				bitmap,
-				0,
-				sourceY,
-				bitmap.width,
-				targetHeight,
-				0,
-				targetY,
-				canvas.width,
-				targetHeight,
-			);
-
-			capturedElementContentHeight += drawableCssHeight;
-		} finally {
-			bitmap.close();
 		}
+	} catch (error) {
+		partialReason = getPartialCaptureReason(error);
+		if (!canvas || paintedHeight <= 0 || !partialReason) {
+			throw error;
+		}
+		partial = true;
 	}
 
-	return canvas.convertToBlob(getImageEncodeOptions(format, settings));
+	return encodeScreenshotCapture({
+		canvas,
+		format,
+		settings,
+		partial,
+		partialReason,
+		paintedHeight,
+	});
+}
+
+async function encodeScreenshotCapture({
+	canvas,
+	format,
+	settings,
+	partial,
+	partialReason,
+	paintedHeight,
+}) {
+	const totalHeight = canvas.height;
+	const capturedHeight = Math.min(
+		totalHeight,
+		Math.max(1, Math.ceil(paintedHeight)),
+	);
+	let outputCanvas = canvas;
+
+	if (capturedHeight < totalHeight) {
+		outputCanvas = new OffscreenCanvas(canvas.width, capturedHeight);
+		const outputContext = outputCanvas.getContext(
+			"2d",
+			getCanvasContextOptions(format),
+		);
+		if (!outputContext) {
+			throw new Error(t("errorCanvasUnavailable"));
+		}
+		prepareCanvasForEncoding(
+			outputContext,
+			format,
+			canvas.width,
+			capturedHeight,
+		);
+		outputContext.drawImage(
+			canvas,
+			0,
+			0,
+			canvas.width,
+			capturedHeight,
+			0,
+			0,
+			canvas.width,
+			capturedHeight,
+		);
+	}
+
+	return {
+		blob: await outputCanvas.convertToBlob(
+			getImageEncodeOptions(format, settings),
+		),
+		partial,
+		partialReason: partial ? partialReason : "",
+		capturedHeight,
+		totalHeight,
+	};
+}
+
+function getPartialCaptureReason(error) {
+	if (error instanceof RecoverableScreenshotError) {
+		return error.partialReason;
+	}
+
+	if (
+		error instanceof TypeError ||
+		error instanceof ReferenceError ||
+		error instanceof SyntaxError ||
+		error instanceof RangeError
+	) {
+		return "";
+	}
+
+	return PARTIAL_CAPTURE_REASONS.CAPTURE_FAILED;
 }
 
 async function recoverStaleScreenshotLease() {
@@ -853,13 +1034,19 @@ async function ensureTabStillActive(tab) {
 	});
 
 	if (activeTab?.id !== tab.id || (tab.url && activeTab.url !== tab.url)) {
-		throw new Error(t("errorScreenshotTabChanged"));
+		throw new RecoverableScreenshotError(
+			PARTIAL_CAPTURE_REASONS.TAB_CHANGED,
+			t("errorScreenshotTabChanged"),
+		);
 	}
 }
 
 function ensureScreenshotDocumentUnchanged(scrollState) {
 	if (scrollState?.documentChanged) {
-		throw new Error(t("errorScreenshotTabChanged"));
+		throw new RecoverableScreenshotError(
+			PARTIAL_CAPTURE_REASONS.TAB_CHANGED,
+			t("errorScreenshotTabChanged"),
+		);
 	}
 }
 
@@ -877,7 +1064,10 @@ async function ensureScreenshotPageCurrent(tabId, pageState) {
 	}
 
 	if (!isCurrent) {
-		throw new Error(t("errorScreenshotTabChanged"));
+		throw new RecoverableScreenshotError(
+			PARTIAL_CAPTURE_REASONS.TAB_CHANGED,
+			t("errorScreenshotTabChanged"),
+		);
 	}
 }
 
@@ -945,14 +1135,31 @@ async function recoverPendingDownloads() {
 	const pendingDownloads = await listPendingDownloads();
 
 	for (const { downloadId, payload } of pendingDownloads) {
-		const downloadItem = await getDownloadItem(downloadId);
-		if (downloadItem?.state === "complete" || downloadItem?.state === "interrupted") {
-			await processPendingDownload(downloadId);
-			continue;
-		}
+		try {
+			if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+				await deletePendingDownload(downloadId);
+				continue;
+			}
 
-		if (!downloadItem) {
-			await interruptPendingDownload(downloadId, payload);
+			if (payload.cleanupOnly) {
+				await processPendingDownload(downloadId);
+				continue;
+			}
+
+			const downloadItem = await getDownloadItem(downloadId);
+			if (
+				downloadItem?.state === "complete" ||
+				downloadItem?.state === "interrupted"
+			) {
+				await processPendingDownload(downloadId);
+				continue;
+			}
+
+			if (!downloadItem) {
+				await interruptPendingDownload(downloadId, payload);
+			}
+		} catch (error) {
+			console.error(`Failed to recover pending download ${downloadId}.`, error);
 		}
 	}
 }
@@ -981,6 +1188,10 @@ async function processDownloadFinalState(downloadId) {
 	if (!pending) {
 		return;
 	}
+	if (pending.cleanupOnly) {
+		await finalizePendingCleanup(downloadId, pending);
+		return;
+	}
 
 	const downloadItem = await getDownloadItem(downloadId);
 	if (downloadItem?.state === "complete") {
@@ -994,8 +1205,6 @@ async function processDownloadFinalState(downloadId) {
 }
 
 async function completePendingDownload(downloadId, pending, downloadItem) {
-	await revokePendingObjectUrl(pending);
-
 	let copiedPath = false;
 	let errorMessage = "";
 	const finalPath = downloadItem.filename || "";
@@ -1024,6 +1233,10 @@ async function completePendingDownload(downloadId, pending, downloadItem) {
 		error: errorMessage,
 		captureType: pending.captureType || "image",
 		screenshotMode: pending.screenshotMode || "",
+		partialCapture: Boolean(pending.partialCapture),
+		partialReason: pending.partialReason,
+		capturedHeight: pending.capturedHeight,
+		totalHeight: pending.totalHeight,
 		createdAt: pending.createdAt,
 		finishedAt: new Date().toISOString(),
 	});
@@ -1038,7 +1251,38 @@ async function completePendingDownload(downloadId, pending, downloadItem) {
 				: t("notifyImageSavedMessage", labelForFormat(pending.format));
 	const activityId = `download-${pending.historyId || downloadId}`;
 
-	if (pending.action === "copy-path" && copiedPath) {
+	if (pending.partialCapture && pending.action === "copy-path" && copiedPath) {
+		await notify(
+			t("notifyPartialScreenshotSavedTitle"),
+			t(
+				"notifyPartialScreenshotSavedAndCopiedMessage",
+				labelForFormat(pending.format),
+			),
+			"warning",
+			activityId,
+		);
+	} else if (
+		pending.partialCapture &&
+		pending.action === "copy-path" &&
+		errorMessage
+	) {
+		await notify(
+			t("notifyPartialScreenshotSavedTitle"),
+			t("notifyPartialScreenshotSavedCopyFailedMessage", [
+				labelForFormat(pending.format),
+				errorMessage,
+			]),
+			"error",
+			activityId,
+		);
+	} else if (pending.partialCapture) {
+		await notify(
+			t("notifyPartialScreenshotSavedTitle"),
+			t("notifyPartialScreenshotSavedMessage", labelForFormat(pending.format)),
+			"warning",
+			activityId,
+		);
+	} else if (pending.action === "copy-path" && copiedPath) {
 		await notify(
 			t("notifySavedAndCopiedTitle"),
 			t("notifySavedAndCopiedMessage", labelForFormat(pending.format)),
@@ -1059,12 +1303,10 @@ async function completePendingDownload(downloadId, pending, downloadItem) {
 		await notify(savedTitle, savedMessage, "success", activityId);
 	}
 
-	await deletePendingDownload(downloadId);
+	await finalizePendingCleanup(downloadId, pending);
 }
 
 async function interruptPendingDownload(downloadId, pending) {
-	await revokePendingObjectUrl(pending);
-
 	await storeSaveHistory({
 		id: pending.historyId || `download-${downloadId}`,
 		status: "interrupted",
@@ -1076,6 +1318,10 @@ async function interruptPendingDownload(downloadId, pending) {
 		error: t("errorDownloadInterrupted"),
 		captureType: pending.captureType || "image",
 		screenshotMode: pending.screenshotMode || "",
+		partialCapture: false,
+		partialReason: "",
+		capturedHeight: 0,
+		totalHeight: 0,
 		createdAt: pending.createdAt,
 		finishedAt: new Date().toISOString(),
 	});
@@ -1087,24 +1333,74 @@ async function interruptPendingDownload(downloadId, pending) {
 		`download-${pending.historyId || downloadId}`,
 	);
 
-	await deletePendingDownload(downloadId);
+	await finalizePendingCleanup(downloadId, pending);
 }
 
 async function revokePendingObjectUrl(pending) {
 	if (!pending?.objectUrl) {
-		return;
+		return true;
 	}
 
 	try {
 		await revokeBlobUrl(pending.objectUrl);
-	} catch {
-		// Ignore cleanup failures. The download has already finished or stopped.
+		return true;
+	} catch (error) {
+		console.error("Failed to revoke a pending download blob URL.", error);
+		return false;
 	}
 }
 
-function labelForFormat(format) {
+async function finalizePendingCleanup(downloadId, pending) {
+	const cleanupPending = {
+		...(pending && typeof pending === "object" ? pending : {}),
+		cleanupOnly: true,
+	};
+
+	if (!pending?.cleanupOnly) {
+		await setPendingDownload(downloadId, cleanupPending);
+	}
+
+	if (await revokePendingObjectUrl(cleanupPending)) {
+		await deletePendingDownload(downloadId);
+	}
+}
+
+async function acknowledgeReapedBlobUrl(objectUrl) {
+	try {
+		if (typeof objectUrl !== "string" || !objectUrl) {
+			return;
+		}
+
+		const pendingDownloads = await listPendingDownloads();
+		for (const { downloadId, payload } of pendingDownloads) {
+			if (payload?.cleanupOnly && payload.objectUrl === objectUrl) {
+				await deletePendingDownload(downloadId);
+			}
+		}
+	} finally {
+		await closeOffscreenDocumentIfIdle().catch(() => {});
+	}
+}
+
+async function canReapBlobUrl(objectUrl) {
+	if (typeof objectUrl !== "string" || !objectUrl) {
+		return false;
+	}
+
+	const matches = (await listPendingDownloads()).filter(
+		({ payload }) => payload?.objectUrl === objectUrl,
+	);
 	return (
-		FORMATS.find((item) => item.id === format)?.title || format.toUpperCase()
+		matches.length > 0 && matches.every(({ payload }) => payload.cleanupOnly)
+	);
+}
+
+function labelForFormat(format) {
+	const normalizedFormat = typeof format === "string" ? format : "";
+	return (
+		FORMATS.find((item) => item.id === normalizedFormat)?.title ||
+		normalizedFormat.toUpperCase() ||
+		"IMAGE"
 	);
 }
 
@@ -1122,13 +1418,17 @@ async function notify(
 		createdAt: new Date().toISOString(),
 	});
 
-
+	const badgeFeedback = {
+		error: { color: "#b42318", text: "ERR" },
+		warning: { color: "#a15c00", text: "PART" },
+		success: { color: "#1d6f42", text: "OK" },
+	}[status] || { color: "#1d6f42", text: "OK" };
 	const feedbackResults = await Promise.allSettled([
 		chrome.action.setBadgeBackgroundColor({
-			color: status === "error" ? "#b42318" : "#1d6f42",
+			color: badgeFeedback.color,
 		}),
 		chrome.action.setBadgeText({
-			text: status === "error" ? "ERR" : "OK",
+			text: badgeFeedback.text,
 		}),
 		chrome.action.setTitle({
 			title: `${title}\n${message}`,

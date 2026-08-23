@@ -122,6 +122,36 @@
   "errorScreenshotScrollStalled": {
     "message": "Die Seite konnte nicht weit genug scrollen, um den langen Screenshot abzuschließen."
   },
+  "notifyPartialScreenshotSavedTitle": {
+    "message": "Teilweiser Screenshot gespeichert"
+  },
+  "notifyPartialScreenshotSavedMessage": {
+    "message": "Die Aufnahme wurde vorzeitig beendet. Der erfasste Teil wurde als $FORMAT$ gespeichert.",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifyPartialScreenshotSavedAndCopiedMessage": {
+    "message": "Die Aufnahme wurde vorzeitig beendet. Der erfasste Teil wurde als $FORMAT$ gespeichert und der Dateipfad wurde kopiert.",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifyPartialScreenshotSavedCopyFailedMessage": {
+    "message": "Die Aufnahme wurde vorzeitig beendet. Der erfasste Teil wurde als $FORMAT$ gespeichert, aber der Dateipfad konnte nicht kopiert werden: $ERROR$",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
   "notifySavedAndCopiedTitle": {
     "message": "Gespeichert und kopiert"
   },
@@ -297,6 +327,25 @@
   },
   "historyStatusInterrupted": {
     "message": "Unterbrochen"
+  },
+  "historyStatusPartial": {
+    "message": "Teilweise"
+  },
+  "partialReasonScrollStalled": {
+    "message": "Grund: Die Seite konnte nicht weiter scrollen."
+  },
+  "partialReasonTabChanged": {
+    "message": "Grund: Der aktive Tab wurde gewechselt."
+  },
+  "partialReasonCaptureFailed": {
+    "message": "Grund: Die Aufnahme ist fehlgeschlagen."
+  },
+  "historyPartialProgress": {
+    "message": "Erfasste Höhe: $CAPTURED$ / $TOTAL$ px",
+    "placeholders": {
+      "captured": { "content": "$1" },
+      "total": { "content": "$2" }
+    }
   },
   "historyStatusCompleted": {
     "message": "Abgeschlossen"

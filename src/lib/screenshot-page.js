@@ -2,17 +2,17 @@ export function preparePageForScreenshot(recoveryTimeoutMs) {
 	const doc = document.documentElement;
 	const body = document.body;
 	const recoveryStateAttribute = "data-img-save-as-capture-recovery";
+	const scrollingElement = document.scrollingElement || doc;
 	restoreStoredCaptureState();
 	const recoveryToken = `capture-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
-	const scrollingElement = document.scrollingElement || doc;
 	const viewportWidth = window.innerWidth;
 	const viewportHeight = window.innerHeight;
+	// scrollHeight is integer-rounded while the root rect preserves fractional
+	// CSS pixels. Keep both measurements tied to the element window.scrollTo uses.
+	const scrollingElementHeight = scrollingElement.getBoundingClientRect().height;
 	const pageHeight = Math.max(
 		scrollingElement.scrollHeight,
-		doc.scrollHeight,
-		body?.scrollHeight || 0,
-		doc.offsetHeight,
-		body?.offsetHeight || 0,
+		scrollingElementHeight,
 		viewportHeight,
 	);
 	const rootMaxScrollY = Math.max(0, pageHeight - viewportHeight);
@@ -29,15 +29,11 @@ export function preparePageForScreenshot(recoveryTimeoutMs) {
 		);
 		const previousTargetMarker =
 			scrollElement.getAttribute("data-img-save-as-scroll-target") || "";
-		const elementTop = Math.max(0, Math.min(viewportHeight, rect.top));
-		const elementBottom = Math.max(
-			elementTop,
-			Math.min(viewportHeight, rect.bottom),
+		const elementTop = Math.max(
+			0,
+			Math.min(viewportHeight, rect.top + scrollElement.clientTop),
 		);
-		const elementViewportHeight = Math.min(
-			scrollElement.clientHeight,
-			Math.max(1, elementBottom - elementTop),
-		);
+		const elementViewportHeight = scrollElement.clientHeight;
 
 		scrollElement.setAttribute("data-img-save-as-scroll-target", targetId);
 
@@ -53,6 +49,10 @@ export function preparePageForScreenshot(recoveryTimeoutMs) {
 			originalDocumentScrollBehavior: doc.style.scrollBehavior,
 			originalBodyScrollBehavior: body?.style.scrollBehavior || "",
 			originalTargetScrollBehavior: scrollElement.style.scrollBehavior,
+			originalTargetScrollSnapType:
+				scrollElement.style.getPropertyValue("scroll-snap-type"),
+			originalTargetScrollSnapPriority:
+				scrollElement.style.getPropertyPriority("scroll-snap-type"),
 			viewportWidth,
 			viewportHeight,
 			pageHeight:
@@ -75,6 +75,7 @@ export function preparePageForScreenshot(recoveryTimeoutMs) {
 		}
 
 		scrollElement.style.scrollBehavior = "auto";
+		scrollElement.style.setProperty("scroll-snap-type", "none", "important");
 		scrollElement.scrollTop = 0;
 		scheduleRecovery();
 		return state;
@@ -87,6 +88,10 @@ export function preparePageForScreenshot(recoveryTimeoutMs) {
 		originalScrollY: window.scrollY,
 		originalDocumentScrollBehavior: doc.style.scrollBehavior,
 		originalBodyScrollBehavior: body?.style.scrollBehavior || "",
+		originalScrollingElementScrollSnapType:
+			scrollingElement.style.getPropertyValue("scroll-snap-type"),
+		originalScrollingElementScrollSnapPriority:
+			scrollingElement.style.getPropertyPriority("scroll-snap-type"),
 		viewportWidth,
 		viewportHeight,
 		pageHeight,
@@ -99,6 +104,7 @@ export function preparePageForScreenshot(recoveryTimeoutMs) {
 	if (body) {
 		body.style.scrollBehavior = "auto";
 	}
+	scrollingElement.style.setProperty("scroll-snap-type", "none", "important");
 
 	window.scrollTo(state.originalScrollX, 0);
 	scheduleRecovery();
@@ -135,6 +141,14 @@ export function preparePageForScreenshot(recoveryTimeoutMs) {
 		if (body) {
 			body.style.scrollBehavior = storedState.originalBodyScrollBehavior || "";
 		}
+		if ("originalScrollingElementScrollSnapType" in storedState) {
+			restoreInlineStyleProperty(
+				scrollingElement,
+				"scroll-snap-type",
+				storedState.originalScrollingElementScrollSnapType,
+				storedState.originalScrollingElementScrollSnapPriority,
+			);
+		}
 
 		if (storedState.scrollTarget === "element") {
 			const target = document.querySelector(
@@ -143,6 +157,14 @@ export function preparePageForScreenshot(recoveryTimeoutMs) {
 			if (target) {
 				target.style.scrollBehavior =
 					storedState.originalTargetScrollBehavior || "";
+				if ("originalTargetScrollSnapType" in storedState) {
+					restoreInlineStyleProperty(
+						target,
+						"scroll-snap-type",
+						storedState.originalTargetScrollSnapType,
+						storedState.originalTargetScrollSnapPriority,
+					);
+				}
 				target.scrollTop = storedState.originalTargetScrollTop || 0;
 				if (storedState.hadTargetMarker) {
 					target.setAttribute(
@@ -162,10 +184,19 @@ export function preparePageForScreenshot(recoveryTimeoutMs) {
 		doc.removeAttribute(recoveryStateAttribute);
 	}
 
+	function restoreInlineStyleProperty(element, property, value, priority) {
+		if (value) {
+			element.style.setProperty(property, value, priority || "");
+		} else {
+			element.style.removeProperty(property);
+		}
+	}
+
 	function findMainScrollElement(width, height) {
 		const elements = Array.from(document.body?.querySelectorAll("*") || []);
 		let bestElement = null;
 		let bestScore = 0;
+		const visibilityTolerance = 1.5;
 
 		for (const element of elements) {
 			const scrollHeight = element.scrollHeight;
@@ -180,9 +211,34 @@ export function preparePageForScreenshot(recoveryTimeoutMs) {
 			}
 
 			const rect = element.getBoundingClientRect();
-			const visibleWidth = Math.min(width, rect.right) - Math.max(0, rect.left);
-			const visibleHeight =
-				Math.min(height, rect.bottom) - Math.max(0, rect.top);
+			// Stitching assumes scrollTop CSS pixels map one-to-one to captured
+			// viewport pixels. Reject scaled/rotated candidates and any scrollport
+			// that is clipped by the viewport or an overflow-clipping ancestor.
+			if (
+				Math.abs(rect.width - element.offsetWidth) > visibilityTolerance ||
+				Math.abs(rect.height - element.offsetHeight) > visibilityTolerance ||
+				(style.clipPath && style.clipPath !== "none")
+			) {
+				continue;
+			}
+
+			const visibleRect = getClippedVisibleRect(element, width, height);
+			const scrollportLeft = rect.left + element.clientLeft;
+			const scrollportTop = rect.top + element.clientTop;
+			const scrollportRight = scrollportLeft + element.clientWidth;
+			const scrollportBottom = scrollportTop + clientHeight;
+			if (
+				!visibleRect ||
+				visibleRect.left > scrollportLeft + visibilityTolerance ||
+				visibleRect.top > scrollportTop + visibilityTolerance ||
+				visibleRect.right < scrollportRight - visibilityTolerance ||
+				visibleRect.bottom < scrollportBottom - visibilityTolerance
+			) {
+				continue;
+			}
+
+			const visibleWidth = element.clientWidth;
+			const visibleHeight = clientHeight;
 			if (visibleWidth < width * 0.45 || visibleHeight < height * 0.35) {
 				continue;
 			}
@@ -196,6 +252,67 @@ export function preparePageForScreenshot(recoveryTimeoutMs) {
 		}
 
 		return bestElement;
+
+		function getClippedVisibleRect(element, viewportWidth, viewportHeight) {
+			const visibleRect = {
+				left: 0,
+				top: 0,
+				right: viewportWidth,
+				bottom: viewportHeight,
+			};
+
+			for (
+				let ancestor = element.parentElement;
+				ancestor;
+				ancestor = ancestor.parentElement
+			) {
+				const ancestorStyle = getComputedStyle(ancestor);
+				if (
+					ancestorStyle.clipPath &&
+					ancestorStyle.clipPath !== "none"
+				) {
+					return null;
+				}
+
+				const contain = ancestorStyle.contain || "";
+				const containsPaint = /(^|\s)(paint|strict|content)(\s|$)/.test(
+					contain,
+				);
+				const clipsX =
+					containsPaint ||
+					/(auto|scroll|hidden|clip|overlay)/.test(ancestorStyle.overflowX);
+				const clipsY =
+					containsPaint ||
+					/(auto|scroll|hidden|clip|overlay)/.test(ancestorStyle.overflowY);
+				if (!clipsX && !clipsY) {
+					continue;
+				}
+
+				const ancestorRect = ancestor.getBoundingClientRect();
+				if (clipsX) {
+					visibleRect.left = Math.max(
+						visibleRect.left,
+						ancestorRect.left + ancestor.clientLeft,
+					);
+					visibleRect.right = Math.min(
+						visibleRect.right,
+						ancestorRect.left + ancestor.clientLeft + ancestor.clientWidth,
+					);
+				}
+				if (clipsY) {
+					visibleRect.top = Math.max(
+						visibleRect.top,
+						ancestorRect.top + ancestor.clientTop,
+					);
+					visibleRect.bottom = Math.min(
+						visibleRect.bottom,
+						ancestorRect.top + ancestor.clientTop + ancestor.clientHeight,
+					);
+				}
+			}
+
+			return visibleRect;
+		}
 	}
 }
 
@@ -219,6 +336,9 @@ export function scrollPageForScreenshot(state, scrollY) {
 					`[data-img-save-as-scroll-target="${state.targetId}"]`,
 				)
 			: null;
+	if (state.scrollTarget === "element" && !target) {
+		return { documentChanged: true };
+	}
 
 	if (target) {
 		target.scrollTop = scrollY;
@@ -250,7 +370,18 @@ export function isPagePreparedForScreenshot(state) {
 
 	try {
 		const storedState = JSON.parse(serialized);
-		return storedState.recoveryToken === state.recoveryToken;
+		if (storedState.recoveryToken !== state.recoveryToken) {
+			return false;
+		}
+		if (state.scrollTarget !== "element") {
+			return true;
+		}
+
+		return Boolean(
+			document.querySelector(
+				`[data-img-save-as-scroll-target="${state.targetId}"]`,
+			),
+		);
 	} catch {
 		return false;
 	}
@@ -280,6 +411,14 @@ export function restorePageAfterScreenshot(state) {
 	if (body) {
 		body.style.scrollBehavior = state.originalBodyScrollBehavior || "";
 	}
+	if ("originalScrollingElementScrollSnapType" in state) {
+		restoreInlineStyleProperty(
+			document.scrollingElement || doc,
+			"scroll-snap-type",
+			state.originalScrollingElementScrollSnapType,
+			state.originalScrollingElementScrollSnapPriority,
+		);
+	}
 
 	if (state.scrollTarget === "element") {
 		const target = document.querySelector(
@@ -287,6 +426,14 @@ export function restorePageAfterScreenshot(state) {
 		);
 		if (target) {
 			target.style.scrollBehavior = state.originalTargetScrollBehavior || "";
+			if ("originalTargetScrollSnapType" in state) {
+				restoreInlineStyleProperty(
+					target,
+					"scroll-snap-type",
+					state.originalTargetScrollSnapType,
+					state.originalTargetScrollSnapPriority,
+				);
+			}
 			target.scrollTop = state.originalTargetScrollTop || 0;
 
 			if (state.hadTargetMarker) {
@@ -303,4 +450,12 @@ export function restorePageAfterScreenshot(state) {
 	window.scrollTo(state.originalScrollX || 0, state.originalScrollY || 0);
 	doc.removeAttribute("data-img-save-as-capture-recovery");
 	return true;
+
+	function restoreInlineStyleProperty(element, property, value, priority) {
+		if (value) {
+			element.style.setProperty(property, value, priority || "");
+		} else {
+			element.style.removeProperty(property);
+		}
+	}
 }

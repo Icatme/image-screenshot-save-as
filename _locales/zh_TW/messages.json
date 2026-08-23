@@ -122,6 +122,36 @@
   "errorScreenshotScrollStalled": {
     "message": "頁面無法繼續捲動，長截圖未能完成。"
   },
+  "notifyPartialScreenshotSavedTitle": {
+    "message": "部分長截圖已保存"
+  },
+  "notifyPartialScreenshotSavedMessage": {
+    "message": "長截圖提前結束，已將擷取到的部分保存為 $FORMAT$。",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifyPartialScreenshotSavedAndCopiedMessage": {
+    "message": "長截圖提前結束，已將擷取到的部分保存為 $FORMAT$，並複製檔案路徑。",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifyPartialScreenshotSavedCopyFailedMessage": {
+    "message": "長截圖提前結束，已將擷取到的部分保存為 $FORMAT$，但複製檔案路徑失敗：$ERROR$",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
   "notifySavedAndCopiedTitle": {
     "message": "已保存並複製"
   },
@@ -297,6 +327,25 @@
   },
   "historyStatusInterrupted": {
     "message": "中斷"
+  },
+  "historyStatusPartial": {
+    "message": "部分完成"
+  },
+  "partialReasonScrollStalled": {
+    "message": "原因：頁面無法繼續捲動。"
+  },
+  "partialReasonTabChanged": {
+    "message": "原因：作用中分頁已變化。"
+  },
+  "partialReasonCaptureFailed": {
+    "message": "原因：截圖操作失敗。"
+  },
+  "historyPartialProgress": {
+    "message": "已擷取高度：$CAPTURED$ / $TOTAL$ 像素",
+    "placeholders": {
+      "captured": { "content": "$1" },
+      "total": { "content": "$2" }
+    }
   },
   "historyStatusCompleted": {
     "message": "完成"

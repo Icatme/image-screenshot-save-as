@@ -122,6 +122,36 @@
   "errorScreenshotScrollStalled": {
     "message": "The page could not scroll far enough to finish the long screenshot."
   },
+  "notifyPartialScreenshotSavedTitle": {
+    "message": "Partial screenshot saved"
+  },
+  "notifyPartialScreenshotSavedMessage": {
+    "message": "Capture stopped early. Saved the captured portion as $FORMAT$.",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifyPartialScreenshotSavedAndCopiedMessage": {
+    "message": "Capture stopped early. Saved the captured portion as $FORMAT$ and copied the file path.",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifyPartialScreenshotSavedCopyFailedMessage": {
+    "message": "Capture stopped early. Saved the captured portion as $FORMAT$, but copying the file path failed: $ERROR$",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
   "notifySavedAndCopiedTitle": {
     "message": "Saved and copied"
   },
@@ -297,6 +327,25 @@
   },
   "historyStatusInterrupted": {
     "message": "Interrupted"
+  },
+  "historyStatusPartial": {
+    "message": "Partial"
+  },
+  "partialReasonScrollStalled": {
+    "message": "Reason: the page stopped scrolling."
+  },
+  "partialReasonTabChanged": {
+    "message": "Reason: the active tab changed."
+  },
+  "partialReasonCaptureFailed": {
+    "message": "Reason: capture failed."
+  },
+  "historyPartialProgress": {
+    "message": "Height captured: $CAPTURED$ / $TOTAL$ px",
+    "placeholders": {
+      "captured": { "content": "$1" },
+      "total": { "content": "$2" }
+    }
   },
   "historyStatusCompleted": {
     "message": "Completed"

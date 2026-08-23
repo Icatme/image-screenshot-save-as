@@ -96,7 +96,10 @@ function Get-ReleaseSourceMap {
   $releaseRoots = @(
     "manifest.json",
     "_locales",
-    "assets/icons",
+    "assets/icons/icon-16.png",
+    "assets/icons/icon-32.png",
+    "assets/icons/icon-48.png",
+    "assets/icons/icon-128.png",
     "src"
   )
   $map = @{}

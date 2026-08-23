@@ -89,6 +89,13 @@ async function mutateLocalList(key, limit, transform) {
 }
 
 function sanitizeHistoryEntry(entry) {
+	const partialCapture = Boolean(entry?.partialCapture);
+	const totalHeight = normalizeDimension(entry?.totalHeight);
+	const capturedHeight = Math.min(
+		normalizeDimension(entry?.capturedHeight),
+		totalHeight || Number.MAX_SAFE_INTEGER,
+	);
+
 	return {
 		id: String(entry?.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
 		status: entry?.status === "interrupted" ? "interrupted" : "completed",
@@ -100,6 +107,12 @@ function sanitizeHistoryEntry(entry) {
 		error: normalizeString(entry?.error),
 		captureType: entry?.captureType === "screenshot" ? "screenshot" : "image",
 		screenshotMode: normalizeString(entry?.screenshotMode),
+		partialCapture,
+		partialReason: partialCapture
+			? normalizePartialReason(entry?.partialReason)
+			: "",
+		capturedHeight: partialCapture ? capturedHeight : 0,
+		totalHeight: partialCapture ? totalHeight : 0,
 		createdAt: normalizeString(entry?.createdAt),
 		finishedAt: normalizeString(entry?.finishedAt),
 	};
@@ -111,6 +124,17 @@ function pendingDownloadKey(downloadId) {
 
 function normalizeString(value) {
 	return typeof value === "string" ? value : "";
+}
+
+function normalizeDimension(value) {
+	const number = Number(value);
+	return Number.isSafeInteger(number) && number >= 0 ? number : 0;
+}
+
+function normalizePartialReason(value) {
+	return ["scroll_stalled", "tab_changed", "capture_failed"].includes(value)
+		? value
+		: "";
 }
 
 async function waitForQueuedMutation(queue, key) {

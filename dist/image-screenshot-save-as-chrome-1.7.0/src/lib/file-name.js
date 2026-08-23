@@ -32,7 +32,13 @@ export function buildDownloadPath({ srcUrl, pageTitle, format }) {
   return sanitizeFilename(`${filenameStem}.${ext}`, ext);
 }
 
-export function buildScreenshotDownloadPath({ pageTitle, pageUrl, mode, format }) {
+export function buildScreenshotDownloadPath({
+  pageTitle,
+  pageUrl,
+  mode,
+  format,
+  partial = false
+}) {
   const ext = normalizeExtension(format);
   const safeTitle = sanitizeSegment(pageTitle || "");
   const safePageName = sanitizeSegment(extractPageName(pageUrl) || "");
@@ -41,7 +47,11 @@ export function buildScreenshotDownloadPath({ pageTitle, pageUrl, mode, format }
     : mode === "region"
       ? "selected-area-screenshot"
       : "visible-screenshot";
-  const filenameStem = [safeTitle || safePageName || "page", suffix].join("-");
+  const filenameStem = [
+    safeTitle || safePageName || "page",
+    suffix,
+    partial ? "partial" : ""
+  ].filter(Boolean).join("-");
 
   return sanitizeFilename(`${filenameStem}.${ext}`, ext);
 }

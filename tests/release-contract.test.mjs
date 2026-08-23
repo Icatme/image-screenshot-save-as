@@ -19,6 +19,7 @@ function placeholderNames(message) {
 test("manifest is MV3 and has a valid Chrome extension version", async () => {
   const manifest = await readJson("manifest.json");
   const packageMetadata = await readJson("package.json");
+  const packageLockMetadata = await readJson("package-lock.json");
   assert.equal(manifest.manifest_version, 3);
   assert.ok(
     Number(manifest.minimum_chrome_version.split(".")[0]) >= 116,
@@ -35,7 +36,31 @@ test("manifest is MV3 and has a valid Chrome extension version", async () => {
   while (npmVersionParts.length < 3) {
     npmVersionParts.push("0");
   }
-  assert.equal(packageMetadata.version, npmVersionParts.join("."));
+  const expectedPackageVersion = npmVersionParts.join(".");
+  assert.equal(packageMetadata.version, expectedPackageVersion);
+  assert.equal(packageLockMetadata.version, expectedPackageVersion);
+  assert.equal(packageLockMetadata.packages[""].version, expectedPackageVersion);
+});
+
+test("release source whitelist contains only the manifest runtime icons", async () => {
+  const manifest = await readJson("manifest.json");
+  const releaseCommon = await readFile(
+    path.join(repositoryRoot, "scripts", "release-common.ps1"),
+    "utf8",
+  );
+  const expectedIcons = Object.values(manifest.icons).sort();
+  assert.deepEqual(expectedIcons, [
+    "assets/icons/icon-128.png",
+    "assets/icons/icon-16.png",
+    "assets/icons/icon-32.png",
+    "assets/icons/icon-48.png",
+  ]);
+
+  for (const iconPath of expectedIcons) {
+    assert.match(releaseCommon, new RegExp(`"${iconPath.replaceAll("/", "\\/")}"`));
+  }
+  assert.doesNotMatch(releaseCommon, /"assets\/icons"/);
+  assert.doesNotMatch(releaseCommon, /icon-(?:1024|source-cropped)\.png|source-icon\.svg/);
 });
 
 test("all locale catalogs have identical keys and placeholder contracts", async () => {

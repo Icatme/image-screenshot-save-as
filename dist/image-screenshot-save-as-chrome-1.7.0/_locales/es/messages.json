@@ -122,6 +122,36 @@
   "errorScreenshotScrollStalled": {
     "message": "La página no pudo desplazarse lo suficiente para terminar la captura larga."
   },
+  "notifyPartialScreenshotSavedTitle": {
+    "message": "Captura parcial guardada"
+  },
+  "notifyPartialScreenshotSavedMessage": {
+    "message": "La captura terminó antes de tiempo. La parte capturada se guardó como $FORMAT$.",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifyPartialScreenshotSavedAndCopiedMessage": {
+    "message": "La captura terminó antes de tiempo. La parte capturada se guardó como $FORMAT$ y se copió la ruta del archivo.",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifyPartialScreenshotSavedCopyFailedMessage": {
+    "message": "La captura terminó antes de tiempo. La parte capturada se guardó como $FORMAT$, pero no se pudo copiar la ruta del archivo: $ERROR$",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
   "notifySavedAndCopiedTitle": {
     "message": "Guardado y copiado"
   },
@@ -297,6 +327,25 @@
   },
   "historyStatusInterrupted": {
     "message": "Interrumpido"
+  },
+  "historyStatusPartial": {
+    "message": "Parcial"
+  },
+  "partialReasonScrollStalled": {
+    "message": "Motivo: la página dejó de desplazarse."
+  },
+  "partialReasonTabChanged": {
+    "message": "Motivo: cambió la pestaña activa."
+  },
+  "partialReasonCaptureFailed": {
+    "message": "Motivo: falló la captura."
+  },
+  "historyPartialProgress": {
+    "message": "Altura capturada: $CAPTURED$ / $TOTAL$ px",
+    "placeholders": {
+      "captured": { "content": "$1" },
+      "total": { "content": "$2" }
+    }
   },
   "historyStatusCompleted": {
     "message": "Completado"

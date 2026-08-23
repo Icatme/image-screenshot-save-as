@@ -189,15 +189,22 @@ async function renderHistory() {
 			item.action === "copy-path"
 				? t("historyActionCopyPath")
 				: t("historyActionSaveOnly"),
-			item.status === "interrupted"
+			item.partialCapture
+				? t("historyStatusPartial")
+				: item.status === "interrupted"
 				? t("historyStatusInterrupted")
 				: t("historyStatusCompleted"),
+			getPartialCaptureMeta(item),
 		]
 			.filter(Boolean)
 			.join(" · ");
 		const extra = item.error ? `${meta} · ${item.error}` : meta;
 		const itemStatus =
-			item.status === "interrupted" || item.error ? "error" : "success";
+			item.status === "interrupted" || item.error
+				? "error"
+				: item.partialCapture
+					? "warning"
+					: "success";
 
 		const listItem = document.createElement("li");
 		listItem.className = "list-item";
@@ -242,7 +249,9 @@ async function renderActivity() {
 	for (const item of activity) {
 		const listItem = document.createElement("li");
 		listItem.className = "list-item";
-		listItem.dataset.status = item.status === "error" ? "error" : "success";
+		listItem.dataset.status = ["error", "warning"].includes(item.status)
+			? item.status
+			: "success";
 
 		const headDiv = document.createElement("div");
 		headDiv.className = "list-head";
@@ -261,6 +270,36 @@ async function renderActivity() {
 		listItem.append(headDiv, messageDiv);
 		activityList.append(listItem);
 	}
+}
+
+function getPartialCaptureMeta(item) {
+	if (!item.partialCapture) {
+		return "";
+	}
+
+	const reasonKey = {
+		scroll_stalled: "partialReasonScrollStalled",
+		tab_changed: "partialReasonTabChanged",
+		capture_failed: "partialReasonCaptureFailed",
+	}[item.partialReason];
+	const capturedHeight = Number(item.capturedHeight);
+	const totalHeight = Number(item.totalHeight);
+	const details = reasonKey ? [t(reasonKey)] : [];
+	if (
+		Number.isSafeInteger(capturedHeight) &&
+		capturedHeight > 0 &&
+		Number.isSafeInteger(totalHeight) &&
+		totalHeight >= capturedHeight
+	) {
+		details.push(
+			t("historyPartialProgress", [
+				String(capturedHeight),
+				String(totalHeight),
+			]),
+		);
+	}
+
+	return details.join(" · ");
 }
 
 function renderListMessage(list, message, status = "") {

@@ -34,6 +34,20 @@ function Get-JsonObject {
   }
 }
 
+function Get-JsonHashtable {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Path
+  )
+
+  try {
+    return Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json -AsHashtable
+  }
+  catch {
+    throw "Invalid JSON at ${Path}: $($_.Exception.Message)"
+  }
+}
+
 function Get-ObjectPropertyMap {
   param(
     [Parameter(Mandatory = $true)]
@@ -225,6 +239,17 @@ while ($packageVersionParts.Count -lt 3) {
 }
 $expectedPackageVersion = $packageVersionParts -join "."
 Assert-Condition ([string]$packageMetadata.version -eq $expectedPackageVersion) "package.json version must be '$expectedPackageVersion' for manifest version '$version'."
+$packageLockMetadata = Get-JsonHashtable -Path (Join-Path $repositoryRoot "package-lock.json")
+Assert-Condition ($packageLockMetadata.ContainsKey("version")) "package-lock.json is missing its root version."
+Assert-Condition ([string]$packageLockMetadata["version"] -eq $expectedPackageVersion) "package-lock.json version must be '$expectedPackageVersion' for manifest version '$version'."
+Assert-Condition ($packageLockMetadata.ContainsKey("packages")) "package-lock.json is missing its packages map."
+$packageLockPackages = $packageLockMetadata["packages"]
+Assert-Condition ($packageLockPackages -is [System.Collections.IDictionary]) "package-lock.json packages must be an object."
+Assert-Condition ($packageLockPackages.ContainsKey("")) "package-lock.json is missing its root package entry."
+$packageLockRoot = $packageLockPackages[""]
+Assert-Condition ($packageLockRoot -is [System.Collections.IDictionary]) "package-lock.json root package entry must be an object."
+Assert-Condition ($packageLockRoot.ContainsKey("version")) "package-lock.json root package entry is missing its version."
+Assert-Condition ([string]$packageLockRoot["version"] -eq $expectedPackageVersion) "package-lock.json root package version must be '$expectedPackageVersion' for manifest version '$version'."
 $releaseBaseName = Get-ReleaseBaseName -Version $version
 $distDirectory = Join-Path $repositoryRoot "dist"
 $stagingDirectory = Join-Path $distDirectory $releaseBaseName

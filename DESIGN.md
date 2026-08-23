@@ -95,7 +95,7 @@ Page Screenshot As
 ### `src/lib/file-name.js`
 
 - 图片名依次取原图 URL 文件名、页面标题、`image`
-- 截图名由页面标题/URL 名称加 `visible-screenshot`、`selected-area-screenshot` 或 `full-page-screenshot` 后缀组成
+- 截图名由页面标题/URL 名称加 `visible-screenshot`、`selected-area-screenshot` 或 `full-page-screenshot` 后缀组成；部分长截图再追加 `partial`
 - 清理 Windows 非法字符和保留名，压缩空白，限制最终长度
 
 ### `src/lib/clipboard.js` 与 `src/offscreen/*`
@@ -161,21 +161,23 @@ HTTP/HTTPS 图片由扩展后台读取。`data:`、`blob:`、`file:` 或后台�
 ### 整页
 
 1. 读取页面尺寸、原滚动位置和主要滚动容器。
-2. 从顶部逐屏滚动，按 Chrome `captureVisibleTab` 速率约束串行捕获。
+2. 临时禁用实际滚动目标的 CSS scroll snap，从顶部逐屏滚动，并按 Chrome `captureVisibleTab` 速率约束串行捕获。
 3. 只拼接每次新出现的区域，生成完整画布。
-4. 在成功、失败或 worker 恢复路径中恢复页面滚动状态。
-5. 按目标格式导出并进入统一下载流程。
+4. 捕获完整结束时也按实际绘制边界裁掉舍入产生的空尾；若至少拼接一屏后发生滚动停滞、滚动目标被页面替换、标签页切换或页面中断，则导出已有内容，并记录稳定原因码及已捕获/总高度。
+5. 在成功、部分完成、失败或 worker 恢复路径中恢复页面滚动状态。
+6. 按目标格式导出并进入统一下载流程。
 
-整页结果最大边长为 `32767px`、最大像素数为 `100,000,000`。扩展一次只执行一个截图任务；捕获期间标签页失焦或切换会中止流程。
+整页结果最大边长为 `32767px`、最大像素数为 `100,000,000`。扩展一次只执行一个截图任务；捕获期间标签页失焦或切换会停止继续捕获，已有画布不为空时仍进入部分截图下载流程。
 
 ## 7. 状态、反馈与恢复
 
-- 待处理下载保存在 `chrome.storage.session`，而不是只放在 service worker 全局变量中，避免 MV3 worker 休眠后完全失去完成回调上下文。
+- 待处理下载保存在 `chrome.storage.session`，而不是只放在 service worker 全局变量中，避免 MV3 worker 休眠后完全失去完成回调上下文；单条损坏记录会被隔离，不阻塞其他下载恢复。
 - 下载状态以 download ID 为独立记录更新，避免并发下载互相覆盖。
-- 保存历史和最近活动由后台串行更新；历史清空也通过后台消息进入同一写入序列，避免与完成回调竞争。
+- 下载完成后的 Blob URL 清理先切换为持久化的 cleanup-only 状态；失败时由后续 worker 唤醒继续重试。Blob 所属的 offscreen 文档会定期向 worker 请求回收授权，只有匹配记录已进入 cleanup-only 才撤销 URL 并回报结果；活动下载会保留并延后检查，全程不依赖可能随 MV3 worker 终止而丢失的定时器。
+- 保存历史和最近活动由后台串行更新；完整与部分截图状态随待处理下载保留，历史清空也通过后台消息进入同一写入序列，避免与完成回调竞争。
 - 截图租约和最近一次捕获时间保存在会话存储中，worker 重启后仍可恢复页面并继续遵守 `captureVisibleTab` 速率限制。
-- 工具栏徽标短暂显示 `OK` 或 `ERR`；标题包含最近一次结果，同时创建系统通知。
-- 设置页读取 `recentActivity`，让用户能查看成功和失败详情。
+- 工具栏徽标短暂显示 `OK`、`PART` 或 `ERR`；标题包含最近一次结果，同时创建系统通知。
+- 设置页读取 `recentActivity`，以成功、警告、失败三种状态展示最近结果；部分截图历史同时显示原因和高度进度。
 
 ## 8. 数据与保留策略
 
@@ -183,7 +185,7 @@ HTTP/HTTPS 图片由扩展后台读取。`data:`、`blob:`、`file:` 或后台�
 | --- | --- | --- |
 | `chrome.storage.sync` | 语言、JPG/WebP 质量、静默保存 | 由 Chrome 设置同步策略管理 |
 | `chrome.storage.local` / `recentActivity` | 标题、消息、状态、时间 | 最近 12 条 |
-| `chrome.storage.local` / `saveHistory` | 动作、格式、结果、路径、错误、截图类型和时间 | 最近 200 条 |
+| `chrome.storage.local` / `saveHistory` | 动作、格式、结果、路径、错误、截图类型、部分原因/高度和时间 | 最近 200 条 |
 | `chrome.storage.session` | 每个下载的临时处理上下文、截图恢复状态 | 当前浏览器会话 |
 
 不持久化图片二进制内容。保存历史包含本机文件路径，因此设置页提供经确认的清空入口。历史不保存无展示用途的原图 URL 或页面标题。

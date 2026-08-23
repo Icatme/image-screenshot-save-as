@@ -140,7 +140,7 @@ async function withOffscreenDocument(operation) {
 	}
 }
 
-async function closeOffscreenDocumentIfIdle() {
+export async function closeOffscreenDocumentIfIdle() {
 	if (
 		activeOperations !== 0 ||
 		offscreenCreationPromise ||

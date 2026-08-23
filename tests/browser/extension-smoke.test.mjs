@@ -213,6 +213,57 @@ test(
       );
       assert.deepEqual(backgroundResponse, { ok: true });
 
+      await page.evaluate(async () => {
+        await chrome.storage.local.set({
+          saveHistory: [
+            {
+              id: "partial-ui-smoke",
+              status: "completed",
+              action: "save",
+              format: "png",
+              requestedPath: "page-full-page-screenshot-partial.png",
+              finalPath: "C:\\Downloads\\page-full-page-screenshot-partial.png",
+              captureType: "screenshot",
+              screenshotMode: "full-page",
+              partialCapture: true,
+              partialReason: "scroll_stalled",
+              capturedHeight: 100,
+              totalHeight: 120,
+              finishedAt: new Date().toISOString(),
+            },
+          ],
+          recentActivity: [
+            {
+              id: "partial-ui-smoke",
+              title: "部分长截图已保存",
+              message: "已保存捕获到的内容。",
+              status: "warning",
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        });
+      });
+      await page.waitForFunction(() => {
+        return (
+          document.querySelector("#history-list .list-item")?.dataset.status ===
+            "warning" &&
+          document.querySelector("#activity-list .list-item")?.dataset.status ===
+            "warning"
+        );
+      });
+      const partialFeedbackCheck = await page.evaluate(() => ({
+        historyStatus:
+          document.querySelector("#history-list .list-item")?.dataset.status,
+        historyMeta:
+          document.querySelector("#history-list .list-meta")?.textContent,
+        activityStatus:
+          document.querySelector("#activity-list .list-item")?.dataset.status,
+      }));
+      assert.equal(partialFeedbackCheck.historyStatus, "warning");
+      assert.equal(partialFeedbackCheck.activityStatus, "warning");
+      assert.match(partialFeedbackCheck.historyMeta, /页面无法继续滚动/);
+      assert.match(partialFeedbackCheck.historyMeta, /100 \/ 120/);
+
       const recoveryCheck = await page.evaluate(async () => {
         const { preparePageForScreenshot, restorePageAfterScreenshot } =
           await import(chrome.runtime.getURL("src/lib/screenshot-page.js"));
@@ -224,11 +275,10 @@ test(
         };
 
         try {
-          const firstState = preparePageForScreenshot(10_000);
+          preparePageForScreenshot(10_000);
           const markerDuringCapture = document.documentElement.hasAttribute(
             "data-img-save-as-capture-recovery",
           );
-          restorePageAfterScreenshot(firstState);
           const secondState = preparePageForScreenshot(10_000);
           scheduledRecoveries[0]();
           const secondMarkerSurvivedFirstTimer =
@@ -252,6 +302,327 @@ test(
         secondMarkerSurvivedFirstTimer: true,
         markerAfterRestore: false,
       });
+
+      const screenshotPageGeometryCheck = await page.evaluate(async () => {
+        const {
+          isPagePreparedForScreenshot,
+          preparePageForScreenshot,
+          restorePageAfterScreenshot,
+          scrollPageForScreenshot,
+        } = await import(
+          chrome.runtime.getURL("src/lib/screenshot-page.js")
+        );
+        const root = document.documentElement;
+        const body = document.body;
+        const detachedContents = document.createDocumentFragment();
+        detachedContents.append(...Array.from(body.childNodes));
+        const originalRootStyle = root.getAttribute("style");
+        const originalBodyStyle = body.getAttribute("style");
+        const originalScrollX = window.scrollX;
+        const originalScrollY = window.scrollY;
+
+        const waitForLayout = () =>
+          new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve)),
+          );
+        const restoreStyle = (element, value) => {
+          if (value === null) {
+            element.removeAttribute("style");
+          } else {
+            element.setAttribute("style", value);
+          }
+        };
+
+        let activeState;
+        try {
+          root.style.cssText =
+            "height:auto!important;min-height:0!important;overflow:auto!important;";
+          body.style.cssText =
+            "display:block!important;height:auto!important;min-height:0!important;" +
+            "margin:0!important;padding:0!important;overflow:visible!important;";
+
+          const fractionalFixture = document.createElement("div");
+          fractionalFixture.style.cssText = "width:1px;height:8845.5px;";
+          body.replaceChildren(fractionalFixture);
+          await waitForLayout();
+
+          window.scrollTo(0, 173);
+          await waitForLayout();
+          const initialScrollY = window.scrollY;
+          const scrollingElement = document.scrollingElement;
+          const rootScrollHeight = scrollingElement.scrollHeight;
+          const rootRectHeight =
+            scrollingElement.getBoundingClientRect().height;
+          const viewportHeight = window.innerHeight;
+
+          window.scrollTo(0, Number.MAX_SAFE_INTEGER);
+          await waitForLayout();
+          const actualMaxScrollY = window.scrollY;
+          window.scrollTo(0, initialScrollY);
+          await waitForLayout();
+
+          activeState = preparePageForScreenshot(10_000);
+          const preparedScrollY = window.scrollY;
+          const fractionalState = {
+            scrollTarget: activeState.scrollTarget,
+            pageHeight: activeState.pageHeight,
+            maxScrollY: activeState.maxScrollY,
+          };
+          const endpoint = await scrollPageForScreenshot(
+            activeState,
+            activeState.maxScrollY,
+          );
+          const reachedScrollY = window.scrollY;
+          const fractionalRestored = restorePageAfterScreenshot(activeState);
+          activeState = null;
+          const restoredScrollY = window.scrollY;
+
+          root.style.cssText =
+            "height:100%!important;min-height:0!important;overflow:hidden!important;";
+          body.style.cssText =
+            "display:block!important;height:100%!important;min-height:0!important;" +
+            "margin:0!important;padding:0!important;overflow:hidden!important;";
+
+          const clippingHost = document.createElement("div");
+          const clippedScroller = document.createElement("div");
+          const clippedHeight = Math.max(240, Math.floor(window.innerHeight * 0.8));
+          const clippingHeight = Math.max(
+            180,
+            Math.floor(window.innerHeight * 0.55),
+          );
+          clippingHost.style.cssText =
+            `position:fixed;left:0;top:0;width:80vw;height:${clippingHeight}px;` +
+            "overflow:hidden;";
+          clippedScroller.style.cssText =
+            `width:100%;height:${clippedHeight}px;overflow-y:auto;`;
+          const clippedContent = document.createElement("div");
+          clippedContent.style.height = `${clippedHeight * 3}px`;
+          clippedScroller.append(clippedContent);
+          clippingHost.append(clippedScroller);
+          body.replaceChildren(clippingHost);
+          clippedScroller.scrollTop = 123;
+          await waitForLayout();
+
+          const clippedRect = clippedScroller.getBoundingClientRect();
+          const clippingRect = clippingHost.getBoundingClientRect();
+          const clippedVisibleHeight =
+            Math.min(window.innerHeight, clippingRect.bottom, clippedRect.bottom) -
+            Math.max(0, clippingRect.top, clippedRect.top);
+          activeState = preparePageForScreenshot(10_000);
+          const clippedState = {
+            scrollTarget: activeState.scrollTarget,
+            maxScrollY: activeState.maxScrollY,
+          };
+          const clippedScrollTopDuringCapture = clippedScroller.scrollTop;
+          const clippedRestored = restorePageAfterScreenshot(activeState);
+          activeState = null;
+          const clippedElementMetrics = {
+            clientHeight: clippedScroller.clientHeight,
+            visibleHeight: clippedVisibleHeight,
+            scrollHeight: clippedScroller.scrollHeight,
+            rectTop: clippedRect.top,
+            rectBottom: clippedRect.bottom,
+            viewportHeight: window.innerHeight,
+            visibleWidth:
+              Math.min(window.innerWidth, clippedRect.right) -
+              Math.max(0, clippedRect.left),
+            viewportWidth: window.innerWidth,
+            scrollTopDuringCapture: clippedScrollTopDuringCapture,
+            restored: clippedRestored,
+            state: clippedState,
+          };
+
+          const transformedScroller = document.createElement("div");
+          const transformedHeight = Math.max(
+            240,
+            Math.floor(window.innerHeight * 0.7),
+          );
+          transformedScroller.style.cssText =
+            `position:fixed;left:0;top:0;width:80vw;height:${transformedHeight}px;` +
+            "overflow-y:auto;transform:scaleY(0.75);transform-origin:top left;";
+          const transformedContent = document.createElement("div");
+          transformedContent.style.height = `${transformedHeight * 3}px`;
+          transformedScroller.append(transformedContent);
+          body.replaceChildren(transformedScroller);
+          transformedScroller.scrollTop = 117;
+          await waitForLayout();
+
+          const transformedRect = transformedScroller.getBoundingClientRect();
+          activeState = preparePageForScreenshot(10_000);
+          const transformedState = {
+            scrollTarget: activeState.scrollTarget,
+            maxScrollY: activeState.maxScrollY,
+          };
+          const transformedScrollTopDuringCapture = transformedScroller.scrollTop;
+          const transformedRestored = restorePageAfterScreenshot(activeState);
+          activeState = null;
+          const transformedElementMetrics = {
+            clientHeight: transformedScroller.clientHeight,
+            rectHeight: transformedRect.height,
+            scrollHeight: transformedScroller.scrollHeight,
+            viewportHeight: window.innerHeight,
+            scrollTopDuringCapture: transformedScrollTopDuringCapture,
+            restored: transformedRestored,
+            state: transformedState,
+          };
+
+          const snapScroller = document.createElement("div");
+          const snapHeight = Math.max(
+            240,
+            Math.floor(window.innerHeight * 0.7),
+          );
+          snapScroller.style.cssText =
+            `position:fixed;left:0;top:0;width:80vw;height:${snapHeight}px;` +
+            "overflow-y:auto;scroll-snap-type:y mandatory;";
+          for (let index = 0; index < 4; index += 1) {
+            const snapSection = document.createElement("div");
+            snapSection.style.cssText =
+              `height:${snapHeight}px;scroll-snap-align:start;`;
+            snapScroller.append(snapSection);
+          }
+          body.replaceChildren(snapScroller);
+          snapScroller.scrollTop = snapHeight;
+          await waitForLayout();
+
+          activeState = preparePageForScreenshot(10_000);
+          const snapState = {
+            scrollTarget: activeState.scrollTarget,
+            originalScrollSnapType: activeState.originalTargetScrollSnapType,
+            originalScrollSnapPriority:
+              activeState.originalTargetScrollSnapPriority,
+          };
+          const snapTypeDuringCapture =
+            snapScroller.style.getPropertyValue("scroll-snap-type");
+          const snapPriorityDuringCapture =
+            snapScroller.style.getPropertyPriority("scroll-snap-type");
+          const snapEndpoint = await scrollPageForScreenshot(activeState, 137);
+          const snapRestored = restorePageAfterScreenshot(activeState);
+          activeState = null;
+          const snapTypeAfterRestore =
+            snapScroller.style.getPropertyValue("scroll-snap-type");
+          const snapPriorityAfterRestore =
+            snapScroller.style.getPropertyPriority("scroll-snap-type");
+
+          activeState = preparePageForScreenshot(10_000);
+          snapScroller.remove();
+          const missingTargetPrepared = isPagePreparedForScreenshot(activeState);
+          const missingTargetEndpoint = await scrollPageForScreenshot(
+            activeState,
+            137,
+          );
+          const missingTargetRestored = restorePageAfterScreenshot(activeState);
+          activeState = null;
+
+          return {
+            fractional: {
+              rootScrollHeight,
+              rootRectHeight,
+              viewportHeight,
+              actualMaxScrollY,
+              initialScrollY,
+              preparedScrollY,
+              endpoint,
+              reachedScrollY,
+              restoredScrollY,
+              restored: fractionalRestored,
+              state: fractionalState,
+            },
+            clippedElement: clippedElementMetrics,
+            transformedElement: transformedElementMetrics,
+            snapElement: {
+              state: snapState,
+              snapTypeDuringCapture,
+              snapPriorityDuringCapture,
+              endpoint: snapEndpoint,
+              restored: snapRestored,
+              snapTypeAfterRestore,
+              snapPriorityAfterRestore,
+              missingTargetPrepared,
+              missingTargetEndpoint,
+              missingTargetRestored,
+            },
+          };
+        } finally {
+          if (activeState) {
+            restorePageAfterScreenshot(activeState);
+          }
+          body.replaceChildren(detachedContents);
+          restoreStyle(root, originalRootStyle);
+          restoreStyle(body, originalBodyStyle);
+          window.scrollTo(originalScrollX, originalScrollY);
+        }
+      });
+
+      const fractional = screenshotPageGeometryCheck.fractional;
+      assert.equal(fractional.rootRectHeight, 8845.5);
+      assert.notEqual(
+        fractional.rootRectHeight,
+        Math.round(fractional.rootRectHeight),
+        "the fixture must expose a real fractional root rect",
+      );
+      assert.equal(fractional.rootScrollHeight, 8846);
+      assert.equal(
+        fractional.actualMaxScrollY,
+        fractional.rootScrollHeight - fractional.viewportHeight,
+      );
+      assert.equal(fractional.state.scrollTarget, "window");
+      assert.equal(fractional.state.pageHeight, fractional.rootScrollHeight);
+      assert.equal(fractional.state.maxScrollY, fractional.actualMaxScrollY);
+      assert.equal(fractional.preparedScrollY, 0);
+      assert.equal(fractional.endpoint.documentChanged, undefined);
+      assert.equal(fractional.endpoint.scrollY, fractional.actualMaxScrollY);
+      assert.equal(fractional.reachedScrollY, fractional.actualMaxScrollY);
+      assert.equal(fractional.restoredScrollY, fractional.initialScrollY);
+      assert.equal(fractional.restored, true);
+
+      const clippedElement = screenshotPageGeometryCheck.clippedElement;
+      assert.ok(clippedElement.scrollHeight > clippedElement.clientHeight + 16);
+      assert.ok(clippedElement.clientHeight > clippedElement.visibleHeight);
+      assert.ok(clippedElement.rectTop >= 0);
+      assert.ok(clippedElement.rectBottom <= clippedElement.viewportHeight);
+      assert.ok(
+        clippedElement.visibleHeight >= clippedElement.viewportHeight * 0.35,
+        "the clipped scroller must otherwise satisfy the height heuristic",
+      );
+      assert.ok(
+        clippedElement.visibleWidth >= clippedElement.viewportWidth * 0.45,
+        "the clipped scroller must otherwise satisfy the width heuristic",
+      );
+      assert.equal(clippedElement.state.scrollTarget, "window");
+      assert.equal(clippedElement.state.maxScrollY, 0);
+      assert.equal(clippedElement.scrollTopDuringCapture, 123);
+      assert.equal(clippedElement.restored, true);
+
+      const transformedElement = screenshotPageGeometryCheck.transformedElement;
+      assert.ok(
+        transformedElement.scrollHeight > transformedElement.clientHeight + 16,
+      );
+      assert.ok(transformedElement.rectHeight < transformedElement.clientHeight);
+      assert.ok(
+        transformedElement.rectHeight >= transformedElement.viewportHeight * 0.35,
+        "the transformed scroller must otherwise satisfy the height heuristic",
+      );
+      assert.equal(transformedElement.state.scrollTarget, "window");
+      assert.equal(transformedElement.state.maxScrollY, 0);
+      assert.equal(transformedElement.scrollTopDuringCapture, 117);
+      assert.equal(transformedElement.restored, true);
+
+      const snapElement = screenshotPageGeometryCheck.snapElement;
+      assert.equal(snapElement.state.scrollTarget, "element");
+      assert.equal(snapElement.state.originalScrollSnapType, "y mandatory");
+      assert.equal(snapElement.state.originalScrollSnapPriority, "");
+      assert.equal(snapElement.snapTypeDuringCapture, "none");
+      assert.equal(snapElement.snapPriorityDuringCapture, "important");
+      assert.equal(snapElement.endpoint.documentChanged, undefined);
+      assert.equal(snapElement.endpoint.scrollY, 137);
+      assert.equal(snapElement.restored, true);
+      assert.equal(snapElement.snapTypeAfterRestore, "y mandatory");
+      assert.equal(snapElement.snapPriorityAfterRestore, "");
+      assert.equal(snapElement.missingTargetPrepared, false);
+      assert.deepEqual(snapElement.missingTargetEndpoint, {
+        documentChanged: true,
+      });
+      assert.equal(snapElement.missingTargetRestored, true);
 
       const serverAddress = server.address();
       const targetUrl = `http://127.0.0.1:${serverAddress.port}/capture`;

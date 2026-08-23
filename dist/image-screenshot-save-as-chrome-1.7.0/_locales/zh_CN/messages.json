@@ -122,6 +122,36 @@
   "errorScreenshotScrollStalled": {
     "message": "页面无法继续滚动，长截图未能完成。"
   },
+  "notifyPartialScreenshotSavedTitle": {
+    "message": "部分长截图已保存"
+  },
+  "notifyPartialScreenshotSavedMessage": {
+    "message": "长截图提前结束，已将捕获到的部分保存为 $FORMAT$。",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifyPartialScreenshotSavedAndCopiedMessage": {
+    "message": "长截图提前结束，已将捕获到的部分保存为 $FORMAT$，并复制文件路径。",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      }
+    }
+  },
+  "notifyPartialScreenshotSavedCopyFailedMessage": {
+    "message": "长截图提前结束，已将捕获到的部分保存为 $FORMAT$，但复制文件路径失败：$ERROR$",
+    "placeholders": {
+      "format": {
+        "content": "$1"
+      },
+      "error": {
+        "content": "$2"
+      }
+    }
+  },
   "notifySavedAndCopiedTitle": {
     "message": "已保存并复制"
   },
@@ -297,6 +327,25 @@
   },
   "historyStatusInterrupted": {
     "message": "中断"
+  },
+  "historyStatusPartial": {
+    "message": "部分完成"
+  },
+  "partialReasonScrollStalled": {
+    "message": "原因：页面无法继续滚动。"
+  },
+  "partialReasonTabChanged": {
+    "message": "原因：活动标签页已变化。"
+  },
+  "partialReasonCaptureFailed": {
+    "message": "原因：截图操作失败。"
+  },
+  "historyPartialProgress": {
+    "message": "已捕获高度：$CAPTURED$ / $TOTAL$ 像素",
+    "placeholders": {
+      "captured": { "content": "$1" },
+      "total": { "content": "$2" }
+    }
   },
   "historyStatusCompleted": {
     "message": "完成"

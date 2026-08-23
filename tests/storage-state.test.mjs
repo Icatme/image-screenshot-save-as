@@ -136,6 +136,10 @@ test("sanitizeSaveHistory drops unused and privacy-sensitive legacy fields", asy
           error: "disk full",
           captureType: "screenshot",
           screenshotMode: "full-page",
+          partialCapture: true,
+          partialReason: "scroll_stalled",
+          capturedHeight: 100,
+          totalHeight: 120,
           createdAt: "2026-01-01T00:00:00.000Z",
           finishedAt: "2026-01-01T00:00:01.000Z",
           srcUrl: "https://private.example/image.png",
@@ -151,6 +155,7 @@ test("sanitizeSaveHistory drops unused and privacy-sensitive legacy fields", asy
   assert.deepEqual(Object.keys(localArea.values.saveHistory[0]).sort(), [
     "action",
     "captureType",
+    "capturedHeight",
     "copiedPath",
     "createdAt",
     "error",
@@ -158,10 +163,32 @@ test("sanitizeSaveHistory drops unused and privacy-sensitive legacy fields", asy
     "finishedAt",
     "format",
     "id",
+    "partialCapture",
+    "partialReason",
     "requestedPath",
     "screenshotMode",
     "status",
+    "totalHeight",
   ]);
   assert.equal(JSON.stringify(localArea.values.saveHistory).includes("private.example"), false);
   assert.equal(JSON.stringify(localArea.values.saveHistory).includes("Private page"), false);
+  assert.equal(localArea.values.saveHistory[0].partialCapture, true);
+  assert.equal(localArea.values.saveHistory[0].partialReason, "scroll_stalled");
+  assert.equal(localArea.values.saveHistory[0].capturedHeight, 100);
+  assert.equal(localArea.values.saveHistory[0].totalHeight, 120);
+});
+
+test("partial progress fields are sanitized to stable values", async () => {
+  const { module, localArea } = await loadStorageState();
+
+  await module.appendSaveHistory({
+    id: "invalid-progress",
+    partialReason: { unexpected: true },
+    capturedHeight: -8,
+    totalHeight: 9.75,
+  });
+
+  assert.equal(localArea.values.saveHistory[0].partialReason, "");
+  assert.equal(localArea.values.saveHistory[0].capturedHeight, 0);
+  assert.equal(localArea.values.saveHistory[0].totalHeight, 0);
 });

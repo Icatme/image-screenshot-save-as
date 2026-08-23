@@ -68,3 +68,26 @@ test("buildScreenshotDownloadPath distinguishes screenshot modes", () => {
     "Dashboard-selected-area-screenshot.webp",
   );
 });
+
+test("buildScreenshotDownloadPath marks partial screenshot exports", () => {
+  assert.equal(
+    buildScreenshotDownloadPath({
+      pageTitle: "Quarterly report",
+      pageUrl: "https://example.test/report",
+      mode: "full-page",
+      format: "png",
+      partial: true,
+    }),
+    "Quarterly-report-full-page-screenshot-partial.png",
+  );
+  assert.equal(
+    buildScreenshotDownloadPath({
+      pageTitle: "Quarterly report",
+      pageUrl: "https://example.test/report",
+      mode: "full-page",
+      format: "png",
+      partial: false,
+    }),
+    "Quarterly-report-full-page-screenshot.png",
+  );
+});
