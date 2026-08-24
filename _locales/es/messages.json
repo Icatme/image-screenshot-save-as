@@ -203,37 +203,28 @@
     "message": "Configuración de Guardar imagen y captura como"
   },
   "optionsHeading": {
-    "message": "Guardar imagen y captura como"
+    "message": "Configuración"
   },
   "optionsIntro": {
-    "message": "Una extensión local para guardar imágenes y capturas de página desde el menú contextual. Esta versión mantiene lo esencial: calidad de exportación, guardado silencioso e historial local."
+    "message": "Configura la calidad de exportación, el modo de guardado y el idioma de la interfaz, y revisa los resultados recientes."
   },
-  "heroEyebrow": {
-    "message": "Utilidad local"
+  "optionsKicker": {
+    "message": "Ajustes de la extensión"
   },
-  "heroTilePng": {
-    "message": "Sin pérdida primero"
+  "optionsSettingsHeading": {
+    "message": "Preferencias"
   },
-  "heroTilePath": {
-    "message": "Copiar tras guardar"
+  "runtimeInfoLabel": {
+    "message": "Información de la extensión"
   },
-  "heroTileLocal": {
-    "message": "Sin código remoto"
+  "runtimeVersionLabel": {
+    "message": "Versión"
   },
-  "heroNote": {
-    "message": "Haz clic derecho en una imagen o página, elige un formato y guarda rápido. Copia la ruta cuando la necesites."
+  "runtimeChromeLabel": {
+    "message": "Navegador mínimo"
   },
-  "sectionTagInterface": {
-    "message": "Interfaz"
-  },
-  "sectionTagOutput": {
-    "message": "Salida"
-  },
-  "sectionTagBehavior": {
-    "message": "Comportamiento"
-  },
-  "sectionTagRecords": {
-    "message": "Registro"
+  "runtimeArchitectureLabel": {
+    "message": "Arquitectura"
   },
   "panelLanguageTitle": {
     "message": "Idioma"
@@ -287,7 +278,7 @@
     "message": "Historial de guardado"
   },
   "panelHistoryBody": {
-    "message": "El historial se almacena solo en el almacenamiento local del navegador, sin servicio remoto ni sqlite. Ábrelo cuando lo necesites con el botón de abajo."
+    "message": "El historial permanece en el almacenamiento local del navegador. Ábrelo cuando lo necesites o bórralo aquí."
   },
   "buttonOpenHistory": {
     "message": "Ver historial"

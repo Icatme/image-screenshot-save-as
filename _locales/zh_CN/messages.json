@@ -203,37 +203,28 @@
     "message": "图片与截图另存为设置"
   },
   "optionsHeading": {
-    "message": "图片与截图另存为"
+    "message": "设置"
   },
   "optionsIntro": {
-    "message": "这是一个纯本地执行的图片与网页截图另存为扩展。这里保留必要配置：导出质量、静默保存，以及本地保存历史。"
+    "message": "管理图片与网页截图的导出质量、保存方式和界面语言，并查看最近保存结果。"
   },
-  "heroEyebrow": {
-    "message": "本地工具"
+  "optionsKicker": {
+    "message": "扩展设置"
   },
-  "heroTilePng": {
-    "message": "优先无损"
+  "optionsSettingsHeading": {
+    "message": "偏好设置"
   },
-  "heroTilePath": {
-    "message": "保存后复制"
+  "runtimeInfoLabel": {
+    "message": "扩展信息"
   },
-  "heroTileLocal": {
-    "message": "无远程代码"
+  "runtimeVersionLabel": {
+    "message": "版本"
   },
-  "heroNote": {
-    "message": "右键图片或页面，选择格式，快速保存；需要时再顺手复制路径。"
+  "runtimeChromeLabel": {
+    "message": "最低浏览器版本"
   },
-  "sectionTagInterface": {
-    "message": "界面"
-  },
-  "sectionTagOutput": {
-    "message": "导出"
-  },
-  "sectionTagBehavior": {
-    "message": "行为"
-  },
-  "sectionTagRecords": {
-    "message": "记录"
+  "runtimeArchitectureLabel": {
+    "message": "扩展架构"
   },
   "panelLanguageTitle": {
     "message": "语言"
@@ -287,7 +278,7 @@
     "message": "保存历史"
   },
   "panelHistoryBody": {
-    "message": "历史记录默认保存在浏览器本地存储中，不依赖远程服务，也不需要 sqlite。点击按钮时再弹出查看。"
+    "message": "历史记录保存在浏览器本地存储中，可按需查看或在这里清空。"
   },
   "buttonOpenHistory": {
     "message": "查看历史记录"

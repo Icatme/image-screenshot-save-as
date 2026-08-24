@@ -203,37 +203,28 @@
     "message": "Einstellungen für Bild & Screenshot speichern als"
   },
   "optionsHeading": {
-    "message": "Bild & Screenshot speichern als"
+    "message": "Einstellungen"
   },
   "optionsIntro": {
-    "message": "Eine vollständig lokale Erweiterung zum Speichern von Bildern und Seiten-Screenshots aus dem Kontextmenü. Diese Version enthält das Nötigste: Exportqualität, stilles Speichern und lokalen Speicherverlauf."
+    "message": "Exportqualität, Speicherverhalten und Oberflächensprache konfigurieren und letzte Speicherergebnisse prüfen."
   },
-  "heroEyebrow": {
-    "message": "Lokales Werkzeug"
+  "optionsKicker": {
+    "message": "Erweiterungseinstellungen"
   },
-  "heroTilePng": {
-    "message": "Verlustfrei zuerst"
+  "optionsSettingsHeading": {
+    "message": "Präferenzen"
   },
-  "heroTilePath": {
-    "message": "Pfad nach dem Speichern"
+  "runtimeInfoLabel": {
+    "message": "Erweiterungsinformationen"
   },
-  "heroTileLocal": {
-    "message": "Kein Remote-Code"
+  "runtimeVersionLabel": {
+    "message": "Version"
   },
-  "heroNote": {
-    "message": "Bild oder Seite rechtsklicken, Format wählen, schnell speichern. Den Pfad nur dann kopieren, wenn du ihn brauchst."
+  "runtimeChromeLabel": {
+    "message": "Mindestbrowser"
   },
-  "sectionTagInterface": {
-    "message": "Oberfläche"
-  },
-  "sectionTagOutput": {
-    "message": "Ausgabe"
-  },
-  "sectionTagBehavior": {
-    "message": "Verhalten"
-  },
-  "sectionTagRecords": {
-    "message": "Verlauf"
+  "runtimeArchitectureLabel": {
+    "message": "Architektur"
   },
   "panelLanguageTitle": {
     "message": "Sprache"
@@ -287,7 +278,7 @@
     "message": "Speicherverlauf"
   },
   "panelHistoryBody": {
-    "message": "Der Verlauf wird nur im lokalen Browserspeicher abgelegt, ohne Remote-Dienst und ohne sqlite. Über die Schaltfläche unten kann er bei Bedarf geöffnet werden."
+    "message": "Der Verlauf bleibt im lokalen Browserspeicher. Bei Bedarf kann er hier geöffnet oder gelöscht werden."
   },
   "buttonOpenHistory": {
     "message": "Verlauf anzeigen"

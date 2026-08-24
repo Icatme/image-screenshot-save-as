@@ -16,15 +16,20 @@ let toastTimeoutId = null;
 let settingsMutationQueue = Promise.resolve();
 
 const form = document.getElementById("settings-form");
-const heroEyebrow = document.getElementById("hero-eyebrow");
-const heroTilePng = document.getElementById("hero-tile-png");
-const heroTilePath = document.getElementById("hero-tile-path");
-const heroTileLocal = document.getElementById("hero-tile-local");
-const heroNote = document.getElementById("hero-note");
-const sectionTagInterface = document.getElementById("section-tag-interface");
-const sectionTagOutput = document.getElementById("section-tag-output");
-const sectionTagBehavior = document.getElementById("section-tag-behavior");
-const sectionTagRecords = document.getElementById("section-tag-records");
+const productName = document.getElementById("product-name");
+const optionsKicker = document.getElementById("options-kicker");
+const settingsHeading = document.getElementById("settings-heading");
+const runtimeGrid = document.getElementById("runtime-grid");
+const runtimeVersionLabel = document.getElementById("runtime-version-label");
+const runtimeVersionValue = document.getElementById("runtime-version-value");
+const runtimeChromeLabel = document.getElementById("runtime-chrome-label");
+const runtimeChromeValue = document.getElementById("runtime-chrome-value");
+const runtimeArchitectureLabel = document.getElementById(
+	"runtime-architecture-label",
+);
+const runtimeArchitectureValue = document.getElementById(
+	"runtime-architecture-value",
+);
 const panelLanguageTitle = document.getElementById("panel-language-title");
 const panelLanguageBody = document.getElementById("panel-language-body");
 const localeOverrideLabel = document.getElementById("locale-override-label");
@@ -61,6 +66,7 @@ void initialize();
 async function initialize() {
 	bindEventListeners();
 	form.setAttribute("aria-busy", "true");
+	renderRuntimeInfo();
 
 	const failures = [];
 	let settings = DEFAULT_SETTINGS;
@@ -167,6 +173,15 @@ function applySettings(settings) {
 		"labelWebpQuality",
 		settings.webpQuality,
 	);
+}
+
+function renderRuntimeInfo() {
+	const manifest = chrome.runtime.getManifest();
+	runtimeVersionValue.textContent = manifest.version || "—";
+	runtimeChromeValue.textContent = manifest.minimum_chrome_version
+		? `Chrome ${manifest.minimum_chrome_version}+`
+		: "Chrome";
+	runtimeArchitectureValue.textContent = `Manifest V${manifest.manifest_version}`;
 }
 
 async function renderHistory() {
@@ -352,17 +367,15 @@ function extractName(path) {
 function localizeStaticContent() {
 	document.documentElement.lang = normalizeHtmlLang(activeLocale);
 	document.title = t("optionsTitle");
-	heroEyebrow.textContent = t("heroEyebrow");
+	productName.textContent = t("extName");
+	optionsKicker.textContent = t("optionsKicker");
 	optionsHeading.textContent = t("optionsHeading");
 	optionsIntro.textContent = t("optionsIntro");
-	heroTilePng.textContent = t("heroTilePng");
-	heroTilePath.textContent = t("heroTilePath");
-	heroTileLocal.textContent = t("heroTileLocal");
-	heroNote.textContent = t("heroNote");
-	sectionTagInterface.textContent = t("sectionTagInterface");
-	sectionTagOutput.textContent = t("sectionTagOutput");
-	sectionTagBehavior.textContent = t("sectionTagBehavior");
-	sectionTagRecords.textContent = t("sectionTagRecords");
+	settingsHeading.textContent = t("optionsSettingsHeading");
+	runtimeGrid.setAttribute("aria-label", t("runtimeInfoLabel"));
+	runtimeVersionLabel.textContent = t("runtimeVersionLabel");
+	runtimeChromeLabel.textContent = t("runtimeChromeLabel");
+	runtimeArchitectureLabel.textContent = t("runtimeArchitectureLabel");
 	panelLanguageTitle.textContent = t("panelLanguageTitle");
 	panelLanguageBody.textContent = t("panelLanguageBody");
 	localeOverrideLabel.textContent = t("labelLanguage");

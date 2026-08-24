@@ -208,6 +208,38 @@ test(
         );
       });
 
+      const runtimeInfoCheck = await page.evaluate(() => {
+        const manifest = chrome.runtime.getManifest();
+        return {
+          architecture: document.querySelector("#runtime-architecture-value")
+            ?.textContent,
+          chrome: document.querySelector("#runtime-chrome-value")?.textContent,
+          expectedArchitecture: `Manifest V${manifest.manifest_version}`,
+          expectedChrome: `Chrome ${manifest.minimum_chrome_version}+`,
+          expectedVersion: manifest.version,
+          version: document.querySelector("#runtime-version-value")?.textContent,
+        };
+      });
+      assert.equal(runtimeInfoCheck.version, runtimeInfoCheck.expectedVersion);
+      assert.equal(runtimeInfoCheck.chrome, runtimeInfoCheck.expectedChrome);
+      assert.equal(
+        runtimeInfoCheck.architecture,
+        runtimeInfoCheck.expectedArchitecture,
+      );
+
+      for (const width of [320, 375, 414, 768]) {
+        await page.setViewport({ width, height: 900, deviceScaleFactor: 1 });
+        const layout = await page.evaluate(() => ({
+          clientWidth: document.documentElement.clientWidth,
+          scrollWidth: document.documentElement.scrollWidth,
+        }));
+        assert.ok(
+          layout.scrollWidth <= layout.clientWidth,
+          `options page must not overflow horizontally at ${width}px`,
+        );
+      }
+      await page.setViewport({ width: 800, height: 600, deviceScaleFactor: 1 });
+
       const backgroundResponse = await page.evaluate(() =>
         chrome.runtime.sendMessage({ type: "CLEAR_SAVE_HISTORY" }),
       );

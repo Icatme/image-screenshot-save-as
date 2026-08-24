@@ -42,3 +42,7 @@
 - Fixed long screenshots at the source: exports crop unpainted canvas tails, partial files append `-partial` and persist stable reason/progress, and the UI presents them as warnings. Main-scroll detection now rejects ancestor-clipped/scaled containers, disables and restores scroll snap, and stops when SPA replacement removes the target; real-DOM regressions cover each boundary.
 - Isolated per-download recovery failures and made Blob URL cleanup a persisted cleanup-only phase retried on later worker wakeups. The offscreen owner now polls the worker for authorization and reaps only URLs whose matching records are cleanup-only, preserving active downloads without adding permissions.
 - Restricted release packaging to the four manifest runtime icons and verified both package-lock version fields. Final gates passed with 58 Node tests, 1 required real-Chrome smoke test, and a verified 27-file ZIP reproduced twice at SHA256 `e4fbf0171a8414e0469c2c515ec153b0f001d521d0f7c671aa35da7a99986a5e`; `npm audit` reported zero vulnerabilities.
+
+## 2026-08-24
+
+- Bumped the extension and package metadata to `1.8.0`, replaced the `1.7.0` distribution artifacts, and verified the final 27-file package after 58 Node tests and 1 required real-Chrome smoke test. Two release builds reproduced ZIP SHA256 `7c540370ed239ebf0b5f72f421cdae90bd0af3cce084b60cd9cfe99e457279a8`.

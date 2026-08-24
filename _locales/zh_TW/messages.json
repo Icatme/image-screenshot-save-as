@@ -203,37 +203,28 @@
     "message": "圖片與截圖另存為設定"
   },
   "optionsHeading": {
-    "message": "圖片與截圖另存為"
+    "message": "設定"
   },
   "optionsIntro": {
-    "message": "這是一個純本地執行的圖片與網頁截圖另存為擴充功能。這裡保留必要配置：導出品質、靜默保存，以及本地保存歷史。"
+    "message": "管理圖片與網頁截圖的匯出品質、儲存方式和介面語言，並查看最近儲存結果。"
   },
-  "heroEyebrow": {
-    "message": "本地工具"
+  "optionsKicker": {
+    "message": "擴充功能設定"
   },
-  "heroTilePng": {
-    "message": "優先無損"
+  "optionsSettingsHeading": {
+    "message": "偏好設定"
   },
-  "heroTilePath": {
-    "message": "保存後複製"
+  "runtimeInfoLabel": {
+    "message": "擴充功能資訊"
   },
-  "heroTileLocal": {
-    "message": "無遠端程式碼"
+  "runtimeVersionLabel": {
+    "message": "版本"
   },
-  "heroNote": {
-    "message": "右鍵圖片或頁面，選擇格式，快速保存；需要時再順手複製路徑。"
+  "runtimeChromeLabel": {
+    "message": "最低瀏覽器版本"
   },
-  "sectionTagInterface": {
-    "message": "介面"
-  },
-  "sectionTagOutput": {
-    "message": "導出"
-  },
-  "sectionTagBehavior": {
-    "message": "行為"
-  },
-  "sectionTagRecords": {
-    "message": "記錄"
+  "runtimeArchitectureLabel": {
+    "message": "擴充功能架構"
   },
   "panelLanguageTitle": {
     "message": "語言"
@@ -287,7 +278,7 @@
     "message": "保存歷史"
   },
   "panelHistoryBody": {
-    "message": "歷史記錄預設保存在瀏覽器本地儲存中，不依賴遠端服務，也不需要 sqlite。點擊按鈕時再彈出查看。"
+    "message": "歷史記錄保存在瀏覽器本地儲存中，可按需查看或在這裡清除。"
   },
   "buttonOpenHistory": {
     "message": "查看歷史記錄"
