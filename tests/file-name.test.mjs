@@ -4,7 +4,17 @@ import test from "node:test";
 import {
   buildDownloadPath,
   buildScreenshotDownloadPath,
+  buildScreenshotPageFilename,
 } from "../src/lib/file-name.js";
+
+test("numbered screenshots preserve ordering, format, and partial status", () => {
+  assert.equal(buildScreenshotPageFilename("Report-full-page-screenshot.png", 1), "Report-full-page-screenshot-001.png");
+  assert.equal(buildScreenshotPageFilename("Report.webp", 25, true), "Report-025-partial.webp");
+  assert.equal(buildScreenshotPageFilename("Report.jpg", 1000), "Report-1000.jpg");
+  assert.throws(() => buildScreenshotPageFilename("Report.png", 0), RangeError);
+  assert.throws(() => buildScreenshotPageFilename("Report.zip", 1), TypeError);
+  assert.ok(buildScreenshotPageFilename(`${"x".repeat(300)}.png`, 12).endsWith("-012.png"));
+});
 
 test("buildDownloadPath decodes the image name and replaces unsafe characters", () => {
   assert.equal(

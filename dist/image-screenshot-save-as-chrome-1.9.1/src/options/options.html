@@ -1,0 +1,865 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Image &amp; Screenshot Save As Settings</title>
+    <style>
+      /* Hallmark · genre: modern-minimal · tone: utilitarian · anchor hue: warm coral · macrostructure: Split Studio · designed-as-app · contrast: pass (40–41) · responsive: pass (34, 49–57) */
+      /* Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V4 */
+      :root {
+        color-scheme: light;
+        --bg: oklch(0.965 0.012 82);
+        --paper: oklch(0.992 0.006 82);
+        --panel: oklch(0.978 0.012 82);
+        --panel-strong: oklch(0.94 0.025 78);
+        --ink: oklch(0.24 0.028 47);
+        --muted: oklch(0.49 0.025 52);
+        --line: oklch(0.86 0.022 72);
+        --accent: oklch(0.58 0.19 36);
+        --accent-strong: oklch(0.48 0.17 34);
+        --accent-ink: oklch(0.992 0.006 82);
+        --accent-soft: oklch(0.94 0.045 36);
+        --signal: oklch(0.46 0.15 248);
+        --signal-soft: oklch(0.94 0.035 248);
+        --success: oklch(0.48 0.12 145);
+        --success-soft: oklch(0.95 0.035 145);
+        --warning-soft: oklch(0.94 0.06 78);
+        --overlay: oklch(0.2 0.02 50 / 0.24);
+        --shadow: 0 1px 2px oklch(0.29 0.03 50 / 0.08);
+        --shadow-modal: 0 40px 100px var(--overlay);
+        --shadow-toast: 0 24px 60px oklch(0.2 0.02 50 / 0.26);
+        --font-display: Bahnschrift, "DIN Alternate", "Segoe UI", sans-serif;
+        --font-body: Aptos, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        --radius-xl: 26px;
+        --radius-lg: 20px;
+        --radius-md: 16px;
+        --radius-sm: 12px;
+        --space-2xs: 4px;
+        --space-xs: 8px;
+        --space-sm: 12px;
+        --space-md: 16px;
+        --space-lg: 24px;
+        --space-xl: 32px;
+        --space-2xl: 48px;
+        --space-3xl: 64px;
+        --space-4xl: 96px;
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+        --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        overflow-x: clip;
+        background: var(--bg);
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        overflow-x: clip;
+        font-family: var(--font-body);
+        color: var(--ink);
+        background: var(--bg);
+      }
+
+      main {
+        position: relative;
+        width: min(1120px, calc(100% - var(--space-xl)));
+        margin: clamp(var(--space-lg), 4vw, var(--space-2xl)) auto;
+        display: grid;
+        gap: var(--space-lg);
+      }
+
+      .app-summary {
+        padding: clamp(var(--space-lg), 4vw, var(--space-2xl));
+        border: 1px solid var(--line);
+        border-radius: var(--radius-xl);
+        background: var(--paper);
+        box-shadow: var(--shadow);
+      }
+
+      .summary-layout,
+      .settings-shell {
+        position: relative;
+        z-index: 1;
+      }
+
+      .summary-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.18fr) minmax(320px, 0.82fr);
+        gap: clamp(var(--space-lg), 4vw, var(--space-2xl));
+        align-items: end;
+      }
+
+      .brand-line {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+      }
+
+      .brand-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+      }
+
+      .product-name {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+
+      .kicker {
+        margin-top: var(--space-2xs);
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .kicker::before {
+        display: none;
+      }
+
+      h1 {
+        min-width: 0;
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 2.75rem;
+        font-weight: 700;
+        line-height: 1.04;
+        letter-spacing: -0.045em;
+        overflow-wrap: anywhere;
+      }
+
+      .intro {
+        width: min(58ch, 100%);
+        margin: var(--space-sm) 0 0;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.65;
+      }
+
+      .runtime-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin: 0;
+        border-block: 1px solid var(--line);
+      }
+
+      .runtime-item {
+        min-width: 0;
+        padding: var(--space-sm);
+      }
+
+      .runtime-item + .runtime-item {
+        border-inline-start: 1px solid var(--line);
+      }
+
+      .runtime-item dt {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .runtime-item dd {
+        display: block;
+        margin: var(--space-xs) 0 0;
+        overflow-wrap: anywhere;
+        font-family: var(--font-display);
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+      }
+
+      .settings-shell {
+        padding: clamp(var(--space-lg), 3.5vw, var(--space-xl));
+        border-radius: var(--radius-xl);
+        background: var(--paper);
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      form {
+        display: grid;
+      }
+
+      .form-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-lg);
+        padding-bottom: var(--space-lg);
+      }
+
+      .form-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 1.65rem;
+        letter-spacing: -0.035em;
+      }
+
+      .panel {
+        display: grid;
+        grid-template-columns: minmax(0, 0.82fr) minmax(280px, 1.18fr);
+        gap: clamp(var(--space-lg), 4vw, var(--space-2xl));
+        padding: clamp(var(--space-lg), 3vw, var(--space-xl)) 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .panel::before {
+        display: none;
+      }
+
+      .panel:hover {
+        border-color: var(--line);
+      }
+
+      .panel h2 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 1.45rem;
+        line-height: 1.1;
+        letter-spacing: -0.035em;
+      }
+
+      .panel p {
+        max-width: 48ch;
+        margin: var(--space-xs) 0 0;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.6;
+      }
+
+      .field-grid {
+        display: grid;
+        gap: var(--space-sm);
+        align-content: start;
+      }
+
+      .field-grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .field {
+        display: grid;
+        gap: var(--space-xs);
+      }
+
+      label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-sm);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+
+      select,
+      button {
+        font: inherit;
+      }
+
+      select {
+        width: 100%;
+        appearance: none;
+        min-height: 44px;
+        padding: var(--space-sm) var(--space-2xl) var(--space-sm) var(--space-md);
+        border: 1px solid var(--line);
+        outline: 3px solid transparent;
+        outline-offset: 2px;
+        border-radius: var(--radius-sm);
+        background: var(--panel);
+        color: var(--ink);
+        transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out);
+      }
+
+      .select-wrap {
+        position: relative;
+      }
+
+      .select-wrap::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        right: var(--space-md);
+        width: 9px;
+        height: 9px;
+        border-right: 2px solid var(--muted);
+        border-bottom: 2px solid var(--muted);
+        transform: translateY(-70%) rotate(45deg);
+        pointer-events: none;
+      }
+
+      select:focus-visible,
+      input:focus-visible,
+      button:focus-visible {
+        outline: 3px solid var(--signal);
+        outline-offset: 2px;
+      }
+
+      select:active {
+        background: var(--panel-strong);
+      }
+
+      select:disabled,
+      input:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      .range-wrap {
+        position: relative;
+        padding: var(--space-md) var(--space-md) var(--space-sm);
+        border-radius: var(--radius-sm);
+        background: var(--panel);
+        border: 1px solid var(--line);
+      }
+
+      input[type="range"] {
+        width: 100%;
+        margin: 0;
+        accent-color: var(--accent);
+      }
+
+      .range-wrap.signal input[type="range"] {
+        accent-color: var(--signal);
+      }
+
+      .value {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 58px;
+        padding: var(--space-xs) var(--space-sm);
+        border-radius: 999px;
+        background: var(--paper);
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .toggle {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: center;
+        gap: var(--space-sm);
+        padding: var(--space-md);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--line);
+        background: var(--panel);
+        cursor: pointer;
+        transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out);
+      }
+
+      .toggle input[type="checkbox"] {
+        width: 22px;
+        height: 22px;
+        margin: 0;
+        accent-color: var(--accent);
+      }
+
+      .toggle span {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        flex-wrap: wrap;
+        margin-top: var(--space-md);
+      }
+
+      button {
+        appearance: none;
+        min-height: 44px;
+        padding: var(--space-sm) var(--space-md);
+        border-radius: 999px;
+        border: 1px solid transparent;
+        background: var(--accent-strong);
+        color: var(--accent-ink);
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: transform 160ms var(--ease-out), background 160ms var(--ease-out);
+      }
+
+      button:active {
+        transform: translateY(1px);
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+        transform: none;
+      }
+
+      button[aria-busy="true"] {
+        cursor: wait;
+        opacity: 0.7;
+        transform: none;
+      }
+
+      button.secondary {
+        background: var(--panel);
+        color: var(--ink);
+        border-color: var(--line);
+      }
+
+      .reset-row {
+        justify-content: flex-end;
+      }
+
+      .form-hint,
+      .operation-status {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .form-hint {
+        max-width: 40ch;
+        text-align: right;
+      }
+
+      .operation-status {
+        margin-bottom: var(--space-md);
+        padding: var(--space-sm) var(--space-md);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-sm);
+        background: var(--panel);
+      }
+
+      .operation-status[data-kind="success"] {
+        border-color: color-mix(in oklch, var(--success) 34%, transparent);
+        background: var(--success-soft);
+        color: var(--success);
+      }
+
+      .operation-status[data-kind="error"] {
+        border-color: color-mix(in oklch, var(--accent) 34%, transparent);
+        background: var(--accent-soft);
+        color: var(--accent-strong);
+      }
+
+      .operation-status[hidden] {
+        display: none;
+      }
+
+      .activity-block {
+        margin-top: var(--space-lg);
+        padding-top: var(--space-lg);
+        border-top: 1px solid var(--line);
+      }
+
+      .activity-title {
+        margin: 0 0 var(--space-sm);
+        font-family: var(--font-display);
+        font-size: 20px;
+        letter-spacing: -0.02em;
+      }
+
+      .empty {
+        padding: var(--space-md);
+        border-radius: var(--radius-md);
+        background: var(--panel);
+        color: var(--muted);
+      }
+
+      dialog {
+        position: fixed;
+        inset: 0;
+        width: min(860px, calc(100% - 24px));
+        max-height: min(80vh, 640px);
+        margin: auto;
+        padding: 0;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-xl);
+        background: var(--paper);
+        color: var(--ink);
+        box-shadow: var(--shadow-modal);
+      }
+
+      dialog::backdrop {
+        background: var(--overlay);
+        backdrop-filter: blur(6px);
+      }
+
+      .dialog-body {
+        padding: var(--space-lg);
+      }
+
+      .dialog-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-sm);
+        margin-bottom: var(--space-md);
+      }
+
+      .dialog-title {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 1.8rem;
+        letter-spacing: -0.04em;
+      }
+
+      .list {
+        display: grid;
+        gap: var(--space-sm);
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .list.compact {
+        gap: var(--space-xs);
+      }
+
+      .list.compact .list-item {
+        padding: var(--space-sm) var(--space-md);
+      }
+
+      .list-item {
+        padding: var(--space-sm) var(--space-md);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .list-item[data-status="error"] {
+        background: var(--accent-soft);
+        border-color: color-mix(in oklch, var(--accent) 30%, var(--line));
+      }
+
+      .list-item[data-status="warning"] {
+        background: var(--warning-soft);
+        border-color: color-mix(in oklch, var(--accent) 20%, var(--line));
+      }
+
+      .list-head {
+        display: flex;
+        justify-content: space-between;
+        gap: var(--space-sm);
+        margin-bottom: var(--space-xs);
+        font-size: 12px;
+      }
+
+      .list-title {
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        word-break: break-all;
+      }
+
+      .list-time {
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .list-message,
+      .list-meta {
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.55;
+        word-break: break-word;
+      }
+
+      .list-meta {
+        margin-top: var(--space-xs);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .toast {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        z-index: 20;
+        transform: translate(-50%, -50%) scale(0.96);
+        padding: var(--space-sm) var(--space-lg);
+        border-radius: 999px;
+        background: var(--ink);
+        color: var(--paper);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        box-shadow: var(--shadow-toast);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+      }
+
+      .toast[data-visible="true"] {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        select:hover,
+        .toggle:hover {
+          border-color: var(--accent);
+          background: var(--paper);
+        }
+
+        button:hover {
+          transform: translateY(-1px);
+          background: var(--ink);
+        }
+
+        button.secondary:hover {
+          background: var(--panel-strong);
+        }
+      }
+
+      @media (max-width: 900px) {
+        .summary-layout {
+          grid-template-columns: 1fr;
+          align-items: start;
+        }
+
+        .brand-line {
+          grid-column: auto;
+        }
+      }
+
+      @media (max-width: 720px) {
+        main {
+          width: min(calc(100% - 20px), 1120px);
+          gap: var(--space-sm);
+          margin: var(--space-sm) auto var(--space-lg);
+        }
+
+        .app-summary,
+        .settings-shell {
+          padding: var(--space-lg);
+          border-radius: var(--radius-lg);
+        }
+
+        h1 {
+          font-size: 2.15rem;
+        }
+
+        .panel,
+        .field-grid.two {
+          grid-template-columns: 1fr;
+        }
+
+        .panel {
+          gap: var(--space-md);
+        }
+
+        .form-head {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: var(--space-xs);
+        }
+
+        .form-hint {
+          text-align: left;
+        }
+
+        .dialog-body {
+          padding: var(--space-md);
+        }
+
+        .actions {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        button {
+          width: 100%;
+        }
+      }
+
+      @media (max-width: 420px) {
+        .runtime-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .runtime-item + .runtime-item {
+          border-block-start: 1px solid var(--line);
+          border-inline-start: 0;
+        }
+
+        .dialog-head {
+          align-items: stretch;
+          flex-direction: column;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="app-summary" aria-labelledby="options-heading">
+        <div class="summary-layout">
+          <div class="brand-line">
+            <img class="brand-icon" src="../../assets/icons/icon-48.png" width="40" height="40" alt="">
+            <div>
+              <p class="product-name" id="product-name">Image &amp; Screenshot Save As</p>
+              <div class="kicker" id="options-kicker">Extension settings</div>
+            </div>
+          </div>
+
+          <div class="summary-copy">
+            <h1 id="options-heading">设置</h1>
+            <p class="intro" id="options-intro">
+              管理图片与网页截图的导出质量、保存方式和界面语言，并查看最近保存结果。
+            </p>
+          </div>
+
+          <dl class="runtime-grid" id="runtime-grid" aria-label="Extension information">
+            <div class="runtime-item">
+              <dt id="runtime-version-label">版本</dt>
+              <dd id="runtime-version-value">—</dd>
+            </div>
+            <div class="runtime-item">
+              <dt id="runtime-chrome-label">最低浏览器版本</dt>
+              <dd id="runtime-chrome-value">—</dd>
+            </div>
+            <div class="runtime-item">
+              <dt id="runtime-architecture-label">扩展架构</dt>
+              <dd id="runtime-architecture-value">—</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <section class="settings-shell">
+        <form id="settings-form">
+          <div class="form-head">
+            <h2 class="form-title" id="settings-heading">偏好设置</h2>
+            <p class="form-hint" id="auto-save-hint">设置更改会自动保存。</p>
+          </div>
+          <p class="operation-status" id="operation-status" role="status" aria-live="polite" aria-atomic="true" hidden></p>
+
+          <section class="panel">
+            <div class="panel-copy">
+              <h2 id="panel-language-title">语言</h2>
+              <p id="panel-language-body">默认跟随浏览器界面语言，也可以在这里手动指定。</p>
+            </div>
+
+            <div class="field-grid">
+              <div class="field">
+                <label for="locale-override" id="locale-override-label">界面语言</label>
+                <div class="select-wrap">
+                  <select id="locale-override" name="localeOverride">
+                    <option value="auto">Auto</option>
+                    <option value="en">English</option>
+                    <option value="zh_CN">简体中文</option>
+                    <option value="zh_TW">繁體中文</option>
+                    <option value="es">Español</option>
+                    <option value="de">Deutsch</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-copy">
+              <h2 id="panel-quality-title">导出质量</h2>
+              <p id="panel-quality-body">PNG 始终无损。JPG 和 WebP 使用下面的质量值，范围 0.10 到 1.00。</p>
+            </div>
+
+            <div class="field-grid two">
+              <div class="field">
+                <label for="jpg-quality" id="jpg-quality-label">JPG 质量 <span class="value" id="jpg-quality-value">0.92</span></label>
+                <div class="range-wrap">
+                  <input id="jpg-quality" name="jpgQuality" type="range" min="0.1" max="1" step="0.01" value="0.92">
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="webp-quality" id="webp-quality-label">WebP 质量 <span class="value" id="webp-quality-value">0.92</span></label>
+                <div class="range-wrap signal">
+                  <input id="webp-quality" name="webpQuality" type="range" min="0.1" max="1" step="0.01" value="0.92">
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-copy">
+              <h2 id="panel-save-mode-title">保存方式</h2>
+              <p id="panel-save-mode-body">开启后使用静默保存。默认保存到浏览器的 Downloads 目录。</p>
+            </div>
+
+            <div class="field-grid">
+              <label class="toggle" for="silent-save">
+                <input id="silent-save" name="silentSave" type="checkbox">
+                <span id="silent-save-label">开启静默保存</span>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-copy">
+              <h2 id="panel-history-title">保存历史</h2>
+              <p id="panel-history-body">历史记录保存在浏览器本地存储中。可按需查看或清空。</p>
+            </div>
+
+            <div class="records-content">
+              <div class="actions">
+                <button id="open-history-button" type="button">查看历史记录</button>
+                <button class="secondary" id="clear-history-button" type="button">清空历史</button>
+              </div>
+
+              <section class="activity-block" aria-labelledby="activity-title">
+                <h3 class="activity-title" id="activity-title">最近活动</h3>
+                <ol class="list compact" id="activity-list" aria-live="polite"></ol>
+              </section>
+            </div>
+          </section>
+
+          <div class="actions reset-row">
+            <button class="secondary" id="reset-button" type="button">恢复默认</button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <dialog id="history-dialog" aria-labelledby="history-dialog-title">
+      <div class="dialog-body">
+        <div class="dialog-head">
+          <h2 class="dialog-title" id="history-dialog-title">保存历史</h2>
+          <button class="secondary" id="close-history-button" type="button">关闭</button>
+        </div>
+        <ol class="list" id="history-list" aria-live="polite"></ol>
+      </div>
+    </dialog>
+
+    <div class="toast" id="toast" aria-hidden="true"></div>
+
+    <script type="module" src="./options.js"></script>
+  </body>
+</html>

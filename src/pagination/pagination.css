@@ -1,0 +1,30 @@
+:root { color-scheme: light; font-family: Aptos, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; color: #382d27; background: #f7f5ef; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 32px 20px; }
+main { max-width: 620px; margin: 0 auto; padding: 32px; background: #fffef9; border: 1px solid #ded8cc; border-radius: 16px; }
+h1 { font-size: 25px; line-height: 1.35; margin: 12px 0; }
+h2, legend { font-size: 15px; font-weight: 650; }
+p { line-height: 1.6; overflow-wrap: anywhere; }
+.eyebrow, .muted { color: #6e645b; font-size: 13px; }
+.eyebrow { margin-top: 0; }
+fieldset { border: 0; padding: 0; margin: 24px 0 0; min-width: 0; }
+legend { margin-bottom: 12px; }
+.choice { display: flex; align-items: flex-start; gap: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid #c9c0b4; border-radius: 8px; cursor: pointer; }
+.choice:has(:checked) { background: #fff2e9; border-color: #b13c21; }
+.choice:has(:disabled) { opacity: 0.6; cursor: default; }
+.choice input { margin-top: 4px; accent-color: #b13c21; }
+.choice strong, .choice span span, .choice small { display: block; }
+.choice span span { font-size: 14px; line-height: 1.5; margin-top: 6px; }
+.choice small { color: #6e645b; margin-top: 8px; }
+.destination { padding-top: 8px; }
+.destination h2 { margin-bottom: 6px; }
+#directory-name { margin-top: 0; }
+button { border: 1px solid #b9afa2; border-radius: 6px; padding: 10px 16px; background: #fffef9; color: inherit; font: inherit; font-size: 14px; cursor: pointer; }
+button:disabled { opacity: 0.55; cursor: default; }
+button:focus-visible, input:focus-visible { outline: 3px solid #216b9c; outline-offset: 3px; }
+button:hover:not(:disabled) { background: #f2eee6; }
+#save { border-color: #a8351f; background: #a8351f; color: #fff; }
+#save:hover:not(:disabled) { background: #8e2b18; }
+.actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+#status[data-error="true"] { color: #a52a1b; }
+@media (max-width: 480px) { body { padding: 16px 10px; } main { padding: 22px 18px; } .actions button { flex: 1; } }

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Screenshot pages</title>
+    <link rel="stylesheet" href="pagination.css">
+    <script type="module" src="pagination.js"></script>
+  </head>
+  <body>
+    <main aria-labelledby="title">
+      <p class="eyebrow">Image &amp; Screenshot Save As</p>
+      <h1 id="title" data-i18n="paginationTitle"></h1>
+      <p id="intro"></p>
+      <p id="dimensions" class="muted"></p>
+      <form id="form">
+        <fieldset id="controls" disabled>
+          <legend data-i18n="paginationChooseMode"></legend>
+          <label class="choice">
+            <input type="radio" name="mode" value="longest">
+            <span><strong data-i18n="menuScreenshotLongest"></strong><span data-i18n="paginationLongestDescription"></span><small id="longest-count"></small></span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="mode" value="a4">
+            <span><strong data-i18n="menuScreenshotA4"></strong><span data-i18n="paginationA4Description"></span><small id="a4-count"></small></span>
+          </label>
+          <section class="destination" aria-labelledby="directory-label">
+            <h2 id="directory-label" data-i18n="paginationDirectory"></h2>
+            <p id="directory-name"></p>
+            <button id="choose-directory" type="button" data-i18n="paginationChooseDirectory"></button>
+            <p class="muted" data-i18n="paginationDirectoryHint"></p>
+          </section>
+          <p id="copy-note" class="muted" hidden data-i18n="paginationCopyNotice"></p>
+          <p class="muted" data-i18n="paginationFilenameHint"></p>
+        </fieldset>
+        <p id="status" role="status" aria-live="polite"></p>
+        <div class="actions">
+          <button id="cancel" type="button" data-i18n="paginationCancel"></button>
+          <button id="save" type="submit" disabled data-i18n="paginationSave"></button>
+        </div>
+      </form>
+    </main>
+  </body>
+</html>
