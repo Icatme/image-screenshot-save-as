@@ -88,16 +88,25 @@ export async function captureScreenshotFrames({
           targetEnd = Math.min(plan.height, Math.round(outputCssHeight * scaleY));
         }
 
-        const sourceHeight = Math.min(bitmap.height - sourceY, targetEnd - writer.paintedHeight);
+        const plannedHeight = targetEnd - writer.paintedHeight;
+        const sourceHeight = Math.min(bitmap.height - sourceY, plannedHeight);
         if (sourceHeight <= 0) throw stalled();
         writing = true;
         await writer.draw(bitmap, { sourceY, sourceHeight, targetY: writer.paintedHeight });
         writing = false;
-        capturedCssHeight = nextCssHeight;
+        capturedCssHeight = sourceHeight < plannedHeight
+          ? capturedCssHeight + sourceHeight / scaleY
+          : nextCssHeight;
         if (writer.paintedHeight >= plan.height) break;
       } finally {
         bitmap.close();
       }
+    }
+    if (!writer) {
+      throw stalled();
+    }
+    if (!partialReason && writer.paintedHeight < plan.height) {
+      partialReason = "scroll_stalled";
     }
   } catch (error) {
     partialReason = error.partialReason || classifyCaptureError(error);

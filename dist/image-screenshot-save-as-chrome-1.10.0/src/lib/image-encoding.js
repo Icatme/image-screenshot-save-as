@@ -1,3 +1,6 @@
+// https://developers.google.com/speed/webp/faq#what_is_the_maximum_size_a_webp_image_can_be
+export const MAX_WEBP_EDGE = 16383;
+
 export const IMAGE_ERROR_CODES = Object.freeze({
   UNSUPPORTED_FORMAT: "UNSUPPORTED_FORMAT",
   SOURCE_TOO_LARGE: "SOURCE_TOO_LARGE",

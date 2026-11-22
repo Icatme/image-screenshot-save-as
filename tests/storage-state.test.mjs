@@ -121,6 +121,17 @@ test("activity IDs are de-duplicated for retry-safe feedback", async () => {
   assert.equal(localArea.values.recentActivity[0].message, "retry");
 });
 
+test("appendActivity generates distinct IDs when entry.id is empty or undefined", async () => {
+  const { module, localArea } = await loadStorageState();
+
+  await module.appendActivity({ id: "", message: "first" });
+  await module.appendActivity({ id: undefined, message: "second" });
+
+  assert.equal(localArea.values.recentActivity.length, 2);
+  assert.ok(localArea.values.recentActivity.every((item) => typeof item.id === "string" && item.id.length > 0));
+  assert.notEqual(localArea.values.recentActivity[0].id, localArea.values.recentActivity[1].id);
+});
+
 test("sanitizeSaveHistory drops unused and privacy-sensitive legacy fields", async () => {
   const { module, localArea } = await loadStorageState({
     local: {

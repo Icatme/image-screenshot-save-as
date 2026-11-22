@@ -51,3 +51,25 @@ test("saveSettings clamps quality before storage", async () => {
   });
   assert.deepEqual(writes.at(-1), result);
 });
+
+test("saveSettings falls back to default quality for empty, null, or boolean inputs", async () => {
+  const result = await saveSettings({
+    jpgQuality: "",
+    webpQuality: null,
+    silentSave: false,
+    localeOverride: "auto",
+  });
+
+  assert.equal(result.jpgQuality, DEFAULT_SETTINGS.jpgQuality);
+  assert.equal(result.webpQuality, DEFAULT_SETTINGS.webpQuality);
+
+  const booleanResult = await saveSettings({
+    jpgQuality: false,
+    webpQuality: true,
+    silentSave: false,
+    localeOverride: "auto",
+  });
+
+  assert.equal(booleanResult.jpgQuality, DEFAULT_SETTINGS.jpgQuality);
+  assert.equal(booleanResult.webpQuality, DEFAULT_SETTINGS.webpQuality);
+});

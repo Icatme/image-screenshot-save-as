@@ -292,3 +292,29 @@ test("a stuck scroll target preserves its captured prefix and reports the interr
   assert.deepEqual(capture.pages[0].rows, rows(100));
   assertResourcesReleased(capture);
 });
+
+test("a fractional element shortfall finishes cleanly as partial instead of throwing RangeError", async () => {
+  const capture = fixture({
+    width: 30,
+    viewportHeight: 101,
+    pageHeight: 122,
+    scale: 126 / 101,
+    pageState: {
+      scrollTarget: "element",
+      elementTop: 81,
+      elementViewportHeight: 21,
+      elementScrollHeight: 42,
+      maxScrollY: 21,
+    },
+    makeRows(scrollY, bitmapHeight) {
+      return Array.from({ length: bitmapHeight }, (_, row) => `${scrollY}-${row}`);
+    },
+  });
+  const result = await capture.run();
+  assert.equal(result.partial, true);
+  assert.equal(result.partialReason, "scroll_stalled");
+  assert.equal(result.capturedHeight, 151);
+  assert.equal(result.totalHeight, 152);
+  assert.equal(capture.pages.length, 1);
+  assertResourcesReleased(capture);
+});

@@ -135,3 +135,48 @@ test("oversized decoded dimensions fail with a stable error code", async () => {
   );
   assert.equal(bitmapClosed, true);
 });
+
+test("WebP rejects images above its 16383px format limit", async () => {
+  let bitmapClosed = false;
+  globalThis.createImageBitmap = async () => ({
+    width: 16384,
+    height: 1,
+    close() {
+      bitmapClosed = true;
+    },
+  });
+
+  await assert.rejects(
+    convertImageBlob(new Blob(["source"]), "webp", { webpQuality: 0.9 }),
+    (error) => error?.code === "IMAGE_TOO_LARGE" && error.message.includes("16383"),
+  );
+  assert.equal(bitmapClosed, true);
+});
+
+test("convertImageBlob rejects silent MIME fallback and releases canvas memory", async () => {
+  let createdCanvas;
+  globalThis.createImageBitmap = async () => ({
+    width: 10,
+    height: 10,
+    close() {},
+  });
+  globalThis.OffscreenCanvas = class {
+    constructor(width, height) {
+      this.width = width;
+      this.height = height;
+      createdCanvas = this;
+    }
+    getContext() {
+      return { drawImage() {} };
+    }
+    async convertToBlob() {
+      return new Blob(["png-fallback"], { type: "image/png" });
+    }
+  };
+
+  await assert.rejects(
+    convertImageBlob(new Blob(["source"]), "webp", { webpQuality: 0.8 }),
+    (error) => error?.code === "IMAGE_ENCODE_FAILED",
+  );
+  assert.deepEqual([createdCanvas.width, createdCanvas.height], [0, 0]);
+});

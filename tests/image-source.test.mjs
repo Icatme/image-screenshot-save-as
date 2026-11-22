@@ -74,3 +74,44 @@ test("Chrome Web Store image fallback fails before forbidden script injection", 
 	);
 	assert.equal(executeScriptCalled, false);
 });
+
+test("oversized HTTP images and data URLs do not fall back to page script injection", async () => {
+	let executeScriptCalled = false;
+	globalThis.chrome = {
+		scripting: {
+			async executeScript() {
+				executeScriptCalled = true;
+				return [];
+			},
+		},
+	};
+	globalThis.fetch = async () => ({
+		ok: true,
+		headers: new Headers({
+			"content-length": String(MAX_SOURCE_IMAGE_BYTES + 1),
+		}),
+		body: null,
+	});
+
+	await assert.rejects(
+		getSourceImageBlob(
+			"https://example.test/huge.png",
+			7,
+			0,
+			"https://example.test/",
+			translate,
+		),
+		/errorSourceImageTooLarge/,
+	);
+	await assert.rejects(
+		getSourceImageBlob(
+			"data:image/png;base64,AA==",
+			7,
+			0,
+			"https://example.test/",
+			translate,
+		),
+		/errorSourceImageTooLarge/,
+	);
+	assert.equal(executeScriptCalled, false);
+});

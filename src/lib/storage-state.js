@@ -43,8 +43,8 @@ export async function listPendingDownloads() {
 export function appendActivity(entry) {
 	return mutateLocalList(RECENT_ACTIVITY_KEY, RECENT_ACTIVITY_LIMIT, (current) => {
 		const normalized = {
-			id: entry.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
 			...entry,
+			id: entry?.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
 		};
 		return [
 			normalized,
@@ -56,8 +56,8 @@ export function appendActivity(entry) {
 export function appendSaveHistory(entry) {
 	return mutateLocalList(SAVE_HISTORY_KEY, SAVE_HISTORY_LIMIT, (current) => {
 		const normalized = sanitizeHistoryEntry({
-			id: entry.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
 			...entry,
+			id: entry?.id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
 		});
 		return [
 			normalized,

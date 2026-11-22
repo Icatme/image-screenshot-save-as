@@ -43,6 +43,15 @@ async function initialize() {
     showFinished(request);
     return;
   }
+  if (request.status === "capturing") {
+    busy = true;
+    controls.disabled = true;
+    cancelButton.disabled = true;
+    status.dataset.error = "false";
+    status.textContent = t("paginationCapturing");
+    updateSaveButton();
+    return;
+  }
   if (request.status !== "choosing") {
     throw new Error(t("paginationExpired"));
   }
@@ -110,6 +119,7 @@ async function save(event) {
     status.textContent = t("paginationCapturing");
     const result = await chrome.runtime.sendMessage({ type: "SAVE_PAGED_SCREENSHOT", requestId, mode });
     if (!result?.ok) throw new Error(result?.error || t("errorUnknown"));
+    status.dataset.error = String(Boolean(result.partial));
     status.textContent = t(result.partial ? "paginationSavedPartial" : "paginationSaved", [String(result.savedCount), result.directoryName]);
     finished = true;
   } catch (error) {

@@ -1,6 +1,7 @@
 import {
   IMAGE_ERROR_CODES,
   ImageProcessingError,
+  MAX_WEBP_EDGE,
   getCanvasContextOptions,
   getImageEncodeOptions,
   getImageMimeType,
@@ -26,10 +27,11 @@ export async function convertImageBlob(sourceBlob, format, settings) {
     );
   }
 
+  let canvas = null;
   try {
-    validateBitmap(bitmap);
+    validateBitmap(bitmap, format);
 
-    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
     const context = canvas.getContext("2d", getCanvasContextOptions(format));
     if (!context) {
       throw new ImageProcessingError(
@@ -42,6 +44,12 @@ export async function convertImageBlob(sourceBlob, format, settings) {
     context.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height);
 
     const blob = await canvas.convertToBlob(getImageEncodeOptions(format, settings));
+    if (!blob?.size || blob.type !== mimeType) {
+      throw new ImageProcessingError(
+        IMAGE_ERROR_CODES.IMAGE_ENCODE_FAILED,
+        "This image could not be encoded in the requested format."
+      );
+    }
 
     return {
       blob,
@@ -60,6 +68,10 @@ export async function convertImageBlob(sourceBlob, format, settings) {
       { cause: error }
     );
   } finally {
+    if (canvas) {
+      canvas.width = 0;
+      canvas.height = 0;
+    }
     if (bitmap) {
       bitmap.close();
     }
@@ -75,7 +87,7 @@ function validateSourceBlob(sourceBlob) {
   }
 }
 
-function validateBitmap(bitmap) {
+function validateBitmap(bitmap, format) {
   if (!bitmap.width || !bitmap.height) {
     throw new ImageProcessingError(
       IMAGE_ERROR_CODES.IMAGE_EMPTY,
@@ -83,10 +95,11 @@ function validateBitmap(bitmap) {
     );
   }
 
-  if (bitmap.width > MAX_IMAGE_EDGE || bitmap.height > MAX_IMAGE_EDGE) {
+  const maxEdge = format === "webp" ? Math.min(MAX_IMAGE_EDGE, MAX_WEBP_EDGE) : MAX_IMAGE_EDGE;
+  if (bitmap.width > maxEdge || bitmap.height > maxEdge) {
     throw new ImageProcessingError(
       IMAGE_ERROR_CODES.IMAGE_TOO_LARGE,
-      `Image is too large. Max edge is ${MAX_IMAGE_EDGE}px.`
+      `Image is too large. Max edge is ${maxEdge}px.`
     );
   }
 

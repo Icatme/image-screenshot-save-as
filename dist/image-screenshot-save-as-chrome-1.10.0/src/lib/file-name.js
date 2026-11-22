@@ -65,7 +65,7 @@ export function buildScreenshotPageFilename(filename, index, partial = false) {
     throw new TypeError("A screenshot filename must include its image extension.");
   }
   const suffix = `-${String(index).padStart(3, "0")}${partial ? "-partial" : ""}`;
-  const stem = sanitizeSegment(match[1]);
+  const stem = sanitizeSegment(match[1]) || "screenshot";
   return `${stem}${suffix}.${match[2].toLowerCase()}`;
 }
 
@@ -144,7 +144,11 @@ function sanitizeFilename(value, ext = "") {
   const safeBasename = WINDOWS_RESERVED_NAMES.has(basename.toLowerCase())
     ? `${basename}-file`
     : basename;
-  const rebuilt = ext ? `${safeBasename}.${ext}` : safeBasename;
+  if (!ext) {
+    return safeBasename.slice(0, 180) || "image";
+  }
 
-  return rebuilt.slice(0, 180) || `image.${ext || "png"}`;
+  const maxBasenameLength = Math.max(1, 180 - ext.length - 1);
+  const truncatedBasename = safeBasename.slice(0, maxBasenameLength).replace(/[. ]+$/g, "") || "image";
+  return `${truncatedBasename}.${ext}`;
 }

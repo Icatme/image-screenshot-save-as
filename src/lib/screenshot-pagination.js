@@ -1,6 +1,7 @@
 import {
   IMAGE_ERROR_CODES,
   ImageProcessingError,
+  MAX_WEBP_EDGE,
   getCanvasContextOptions,
   getImageEncodeOptions,
   getImageMimeType,
@@ -9,27 +10,25 @@ import {
 
 export const MAX_SCREENSHOT_EDGE = 32767;
 export const MAX_SCREENSHOT_PIXELS = 100_000_000;
-// https://developers.google.com/speed/webp/faq#what_is_the_maximum_size_a_webp_image_can_be
-const MAX_WEBP_EDGE = 16383;
 
 function isDimension(value) {
   return Number.isSafeInteger(value) && value > 0;
 }
 
-function getMaximumEdge(format) {
+export function getMaximumScreenshotEdge(format) {
   getImageMimeType(format);
   return format === "webp" ? MAX_WEBP_EDGE : MAX_SCREENSHOT_EDGE;
 }
 
 export function canCaptureSingleImage(width, height, format) {
-  const maximumEdge = getMaximumEdge(format);
+  const maximumEdge = getMaximumScreenshotEdge(format);
   return isDimension(width) && isDimension(height)
     && width <= maximumEdge && height <= maximumEdge
     && width * height <= MAX_SCREENSHOT_PIXELS;
 }
 
 export function getScreenshotPagePlan({ width, height, format, mode }) {
-  const maximumEdge = getMaximumEdge(format);
+  const maximumEdge = getMaximumScreenshotEdge(format);
   if (!isDimension(width) || !isDimension(height)) {
     throw new RangeError("Screenshot dimensions must be positive safe integers.");
   }

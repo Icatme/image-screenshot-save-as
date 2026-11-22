@@ -108,8 +108,19 @@ export function selectScreenshotRegion(labels = {}, timeoutMs = 120_000) {
 		message.textContent = instruction;
 		shadow.append(style, selection, message);
 		host.append(backdropStyle, surface);
-		(document.documentElement || document.body).append(host);
-		host.showModal();
+		const mountTarget = document.documentElement || document.body;
+		if (!mountTarget || typeof host.showModal !== "function") {
+			resolve({ cancelled: true });
+			return;
+		}
+		mountTarget.append(host);
+		try {
+			host.showModal();
+		} catch {
+			host.remove();
+			resolve({ cancelled: true });
+			return;
+		}
 
 		let startX = 0;
 		let startY = 0;
@@ -381,8 +392,13 @@ export function selectScreenshotRegion(labels = {}, timeoutMs = 120_000) {
 			}
 		};
 		const onResize = () => {
-			if (!currentRegion) {
+			if (!currentRegion && !pendingResult) {
 				return;
+			}
+			window.clearTimeout(completionTimeoutId);
+			completionTimeoutId = null;
+			if (!pendingResult?.cancelled) {
+				pendingResult = null;
 			}
 			dragging = false;
 			currentRegion = null;

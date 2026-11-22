@@ -111,8 +111,11 @@ function openDirectoryDatabase() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DATABASE_NAME, 1);
     request.onupgradeneeded = () => {
-      request.result.createObjectStore(STORE_NAME);
+      if (!request.result.objectStoreNames?.contains(STORE_NAME)) {
+        request.result.createObjectStore(STORE_NAME);
+      }
     };
+    request.onblocked = () => reject(new Error("Directory storage database is blocked."));
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });

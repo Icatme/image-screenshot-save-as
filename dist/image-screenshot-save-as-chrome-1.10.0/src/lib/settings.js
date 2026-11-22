@@ -28,6 +28,15 @@ function normalizeSettings(rawSettings) {
 }
 
 function clampQuality(value, fallback) {
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value === "boolean" ||
+    (typeof value === "string" && value.trim() === "")
+  ) {
+    return fallback;
+  }
+
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) {
     return fallback;

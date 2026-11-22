@@ -30,7 +30,7 @@ import {
 } from "../lib/screenshot-capture.js";
 import {
 	canCaptureSingleImage,
-	MAX_SCREENSHOT_EDGE,
+	getMaximumScreenshotEdge,
 	MAX_SCREENSHOT_PIXELS,
 } from "../lib/screenshot-pagination.js";
 import {
@@ -78,6 +78,7 @@ const PARTIAL_CAPTURE_REASONS = Object.freeze({
 const WORKER_INSTANCE_ID = crypto.randomUUID();
 const downloadProcessingQueues = new Map();
 let activeLocaleOverride = null;
+let translationRevision = 0;
 let translate = (messageName, substitutions) => {
 	return chrome.i18n?.getMessage(messageName, substitutions) || messageName;
 };
@@ -477,6 +478,7 @@ async function handleScreenshotMenuClick(command, info, tab) {
 		await processPendingDownload(downloadId);
 	} catch (error) {
 		if (error instanceof ScreenshotPaginationRequired) {
+			await releaseScreenshotLease(WORKER_INSTANCE_ID);
 			await openScreenshotPagination(tab, command, error);
 		} else {
 			await notify(t("notifySaveFailedTitle"), getErrorMessage(error), "error");
@@ -514,15 +516,28 @@ async function openScreenshotPagination(tab, command, dimensions) {
 		status: "choosing",
 		createdAt: new Date().toISOString(),
 	};
-	await chrome.storage.session.set({ [PAGINATION_REQUEST_KEY]: request });
-	const chooser = await chrome.tabs.create({
-		url: "about:blank", active: false, windowId: tab.windowId,
-	});
-	await chrome.storage.session.set({ [PAGINATION_REQUEST_KEY]: { ...request, chooserTabId: chooser.id } });
-	// Bind the sender before its script can request status from the worker.
-	await chrome.tabs.update(chooser.id, {
-		url: chrome.runtime.getURL(`${PAGINATION_PAGE}#${request.id}`), active: true,
-	});
+	let chooserId = null;
+	try {
+		await chrome.storage.session.set({ [PAGINATION_REQUEST_KEY]: request });
+		const chooser = await chrome.tabs.create({
+			url: "about:blank", active: false, windowId: tab.windowId,
+		});
+		chooserId = chooser.id;
+		await chrome.storage.session.set({ [PAGINATION_REQUEST_KEY]: { ...request, chooserTabId: chooser.id } });
+		// Bind the sender before its script can request status from the worker.
+		await chrome.tabs.update(chooser.id, {
+			url: chrome.runtime.getURL(`${PAGINATION_PAGE}#${request.id}`), active: true,
+		});
+	} catch (error) {
+		if (chooserId != null) {
+			await chrome.tabs.remove(chooserId).catch(() => {});
+		}
+		const current = await chrome.storage.session.get(PAGINATION_REQUEST_KEY).catch(() => ({}));
+		if (current[PAGINATION_REQUEST_KEY]?.id === request.id) {
+			await chrome.storage.session.remove(PAGINATION_REQUEST_KEY).catch(() => {});
+		}
+		throw error;
+	}
 }
 
 async function savePagedScreenshot(message, sender) {
@@ -536,8 +551,8 @@ async function savePagedScreenshot(message, sender) {
 		|| !["longest", "a4"].includes(message.mode)) {
 		throw new Error(t("paginationExpired"));
 	}
-	const tab = await chrome.tabs.get(request.tab.id);
-	if (tab.url !== request.tab.url || tab.windowId !== request.tab.windowId) {
+	const tab = await chrome.tabs.get(request.tab.id).catch(() => null);
+	if (!tab || tab.url !== request.tab.url || tab.windowId !== request.tab.windowId) {
 		throw new Error(t("errorScreenshotTabChanged"));
 	}
 	const directory = await loadScreenshotDirectory();
@@ -600,11 +615,15 @@ async function savePagedScreenshot(message, sender) {
 			t(result.partial ? "notifyPartialScreenshotSavedTitle" : "notifyScreenshotSavedTitle"),
 			t(result.partial ? "paginationSavedPartial" : "paginationSaved", [String(savedCount), directory.name]),
 			result.partial ? "warning" : "success",
-		);
+		).catch((notifyError) => {
+			console.error(notifyError);
+		});
 		return { ...result, savedCount, directoryName: directory.name };
 	} catch (error) {
 		const message = t("paginationFailed", [String(savedCount), getErrorMessage(error)]);
-		await notify(t("notifySaveFailedTitle"), message, "error");
+		await notify(t("notifySaveFailedTitle"), message, "error").catch((notifyError) => {
+			console.error(notifyError);
+		});
 		throw new Error(message, { cause: error });
 	} finally {
 		await releaseScreenshotLease(WORKER_INSTANCE_ID);
@@ -664,6 +683,10 @@ function parseMenuId(menuItemId) {
 
 	const parts = menuItemId.split(":");
 	if (parts.length === 3 && parts[0] === "action") {
+		if (!FORMATS.some(({ id }) => id === parts[1])
+			|| !ACTIONS.some(({ id }) => id === parts[2])) {
+			return null;
+		}
 		return {
 			kind: "image",
 			format: parts[1],
@@ -707,6 +730,7 @@ async function captureRegionScreenshotBlob(tab, format, settings) {
 	const dataUrl = await captureVisibleTabDataUrl(tab);
 	const bitmap = await createImageBitmap(await readDataUrlBlob(dataUrl, t));
 
+	let canvas = null;
 	try {
 		const source = getScreenshotRegionPixels(
 			region,
@@ -717,8 +741,8 @@ async function captureRegionScreenshotBlob(tab, format, settings) {
 			throw new Error(t("errorScreenshotEmpty"));
 		}
 
-		validateScreenshotSize(source.width, source.height);
-		const canvas = new OffscreenCanvas(source.width, source.height);
+		validateScreenshotSize(source.width, source.height, format);
+		canvas = new OffscreenCanvas(source.width, source.height);
 		const context = canvas.getContext("2d", getCanvasContextOptions(format));
 		if (!context) {
 			throw new Error(t("errorCanvasUnavailable"));
@@ -742,8 +766,17 @@ async function captureRegionScreenshotBlob(tab, format, settings) {
 			source.height,
 		);
 
-		return canvas.convertToBlob(getImageEncodeOptions(format, settings));
+		const encodeOptions = getImageEncodeOptions(format, settings);
+		const blob = await canvas.convertToBlob(encodeOptions);
+		if (!blob?.size || blob.type !== encodeOptions.type) {
+			throw new Error(t("errorImageEncodeFailed"));
+		}
+		return blob;
 	} finally {
+		if (canvas) {
+			canvas.width = 0;
+			canvas.height = 0;
+		}
 		bitmap.close();
 	}
 }
@@ -934,14 +967,15 @@ async function ensureScreenshotPageCurrent(tabId, pageState) {
 	}
 }
 
-function validateScreenshotSize(width, height) {
+function validateScreenshotSize(width, height, format) {
 	if (!width || !height) {
 		throw new Error(t("errorScreenshotEmpty"));
 	}
 
-	if (width > MAX_SCREENSHOT_EDGE || height > MAX_SCREENSHOT_EDGE) {
+	const maxEdge = getMaximumScreenshotEdge(format);
+	if (width > maxEdge || height > maxEdge) {
 		throw new Error(
-			t("errorScreenshotTooLargeEdge", String(MAX_SCREENSHOT_EDGE)),
+			t("errorScreenshotTooLargeEdge", String(maxEdge)),
 		);
 	}
 
@@ -965,7 +999,9 @@ async function downloadBlob(blob, filename, silentSave) {
 			objectUrl,
 		};
 	} catch (error) {
-		await revokeBlobUrl(objectUrl);
+		await revokeBlobUrl(objectUrl).catch((revokeError) => {
+			console.error("Failed to revoke blob URL after download error.", revokeError);
+		});
 		throw new Error(t("errorDownloadStartFailed"), { cause: error });
 	}
 }
@@ -1353,7 +1389,11 @@ async function refreshTranslations(settings) {
 		return;
 	}
 
+	const revision = ++translationRevision;
 	const translator = await getTranslator(nextSettings.localeOverride);
+	if (revision !== translationRevision) {
+		return;
+	}
 	activeLocaleOverride = nextSettings.localeOverride;
 	translate = translator.t;
 

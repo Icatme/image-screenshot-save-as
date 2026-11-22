@@ -80,13 +80,18 @@ function getUiLanguage() {
 async function getCatalog(locale) {
   if (!catalogCache.has(locale)) {
     const url = chrome.runtime.getURL(`_locales/${locale}/messages.json`);
-    const promise = fetch(url).then(async (response) => {
-      if (!response.ok) {
-        throw new Error(`Failed to load locale catalog: ${locale}`);
-      }
+    const promise = fetch(url)
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Failed to load locale catalog: ${locale}`);
+        }
 
-      return response.json();
-    });
+        return response.json();
+      })
+      .catch((error) => {
+        catalogCache.delete(locale);
+        throw error;
+      });
 
     catalogCache.set(locale, promise);
   }
@@ -102,19 +107,24 @@ function applySubstitutions(message, placeholders, substitutions) {
   const values = Array.isArray(substitutions) ? substitutions.map(String) : [String(substitutions)];
 
   if (!placeholders) {
-    return values.reduce((result, value, index) => result.replace(`$${index + 1}`, value), message);
+    return message.replace(/\$([1-9]\d*)/g, (match, index) => {
+      const slot = Number(index) - 1;
+      return slot < values.length ? values[slot] : match;
+    });
   }
 
-  let output = message;
+  const placeholderValues = new Map();
   for (const [name, config] of Object.entries(placeholders)) {
-    const match = /^\$(\d+)$/.exec(config.content || "");
+    const match = /^\$(\d+)$/.exec(config?.content || "");
     if (!match) {
       continue;
     }
 
-    const value = values[Number(match[1]) - 1] ?? "";
-    output = output.replaceAll(`$${name.toUpperCase()}$`, value);
+    placeholderValues.set(name.toLowerCase(), values[Number(match[1]) - 1] ?? "");
   }
 
-  return output;
+  return message.replace(/\$([A-Za-z][A-Za-z0-9_]*)\$/g, (match, name) => {
+    const key = name.toLowerCase();
+    return placeholderValues.has(key) ? placeholderValues.get(key) : match;
+  });
 }

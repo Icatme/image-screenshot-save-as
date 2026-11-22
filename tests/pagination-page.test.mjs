@@ -94,7 +94,7 @@ async function withPage(initialStatus, scenario) {
   for (const [key, value] of Object.entries(globals)) Object.defineProperty(globalThis, key, { configurable: true, value });
   try {
     await import(`../src/pagination/pagination.js?test=${crypto.randomUUID()}`);
-    await waitUntil(() => initialStatus === "interrupted" ? node("#status").textContent.includes("capture interrupted") : sent.length && node("#directory-name").textContent === "Screenshots");
+    await waitUntil(() => initialStatus === "interrupted" ? node("#status").textContent.includes("capture interrupted") : initialStatus === "capturing" ? node("#status").textContent === "paginationCapturing" : sent.length && node("#directory-name").textContent === "Screenshots");
     await scenario(state);
   } finally {
     for (const [key, descriptor] of originals) {
@@ -133,6 +133,18 @@ test("a disconnected save request wakes the replacement worker and presents its 
 
 test("a persisted interruption updates an already open confirmation", async () => {
   await withPage("choosing", async state => {
+    state.publishInterruption();
+    assertInterrupted(state);
+  });
+});
+
+test("reloading while capturing preserves capturing status until completion or interruption", async () => {
+  await withPage("capturing", async state => {
+    assert.equal(state.node("#status").textContent, "paginationCapturing");
+    assert.equal(state.node("#status").dataset.error, "false");
+    assert.equal(state.node("#controls").disabled, true);
+    assert.equal(state.node("#save").disabled, true);
+    assert.equal(state.node("#cancel").disabled, true);
     state.publishInterruption();
     assertInterrupted(state);
   });

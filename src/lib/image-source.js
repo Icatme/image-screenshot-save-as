@@ -36,11 +36,15 @@ export async function getSourceImageBlob(srcUrl, tabId, frameId, pageUrl, t) {
 		throw new Error(t("errorUnableReadFileImage"));
 	}
 
+	if (srcUrl.startsWith("data:")) {
+		return readDataUrlBlob(srcUrl, t);
+	}
+
 	if (!srcUrl.startsWith("blob:")) {
 		try {
 			return await fetchImageBlob(srcUrl, t);
 		} catch (error) {
-			if (tabId == null) {
+			if (error?.name === "SourceImageTooLargeError" || tabId == null) {
 				throw error;
 			}
 		}
@@ -210,13 +214,18 @@ async function extractImageFromPage(tabId, srcUrl, frameId, pageUrl, t) {
 				canvas.width = width;
 				canvas.height = height;
 
-				const context = canvas.getContext("2d");
-				if (!context) {
-					throw new Error(messages.canvasUnavailable);
-				}
+				try {
+					const context = canvas.getContext("2d");
+					if (!context) {
+						throw new Error(messages.canvasUnavailable);
+					}
 
-				context.drawImage(image, 0, 0, width, height);
-				return canvas.toDataURL("image/png");
+					context.drawImage(image, 0, 0, width, height);
+					return canvas.toDataURL("image/png");
+				} finally {
+					canvas.width = 0;
+					canvas.height = 0;
+				}
 			}
 
 			function blobToDataUrl(blob) {
@@ -289,13 +298,13 @@ async function extractImageFromPage(tabId, srcUrl, frameId, pageUrl, t) {
 async function readResponseBlobWithLimit(response, maxBytes, t) {
 	const declaredSize = Number(response.headers.get("content-length"));
 	if (Number.isFinite(declaredSize) && declaredSize > maxBytes) {
-		throw new Error(t("errorSourceImageTooLarge"));
+		throw createSourceTooLargeError(t);
 	}
 
 	if (!response.body) {
 		const blob = await response.blob();
 		if (blob.size > maxBytes) {
-			throw new Error(t("errorSourceImageTooLarge"));
+			throw createSourceTooLargeError(t);
 		}
 		return blob;
 	}
@@ -311,7 +320,7 @@ async function readResponseBlobWithLimit(response, maxBytes, t) {
 		received += value.byteLength;
 		if (received > maxBytes) {
 			await reader.cancel();
-			throw new Error(t("errorSourceImageTooLarge"));
+			throw createSourceTooLargeError(t);
 		}
 		chunks.push(value);
 	}
@@ -319,4 +328,10 @@ async function readResponseBlobWithLimit(response, maxBytes, t) {
 	return new Blob(chunks, {
 		type: response.headers.get("content-type") || "",
 	});
+}
+
+function createSourceTooLargeError(t) {
+	const error = new Error(t("errorSourceImageTooLarge"));
+	error.name = "SourceImageTooLargeError";
+	return error;
 }

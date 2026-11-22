@@ -15,6 +15,8 @@ let autoSaveTimeoutId = null;
 let toastTimeoutId = null;
 let settingsMutationQueue = Promise.resolve();
 let settingsRevision = 0;
+let historyRenderRevision = 0;
+let activityRenderRevision = 0;
 
 const form = document.getElementById("settings-form");
 const productName = document.getElementById("product-name");
@@ -84,7 +86,9 @@ async function initialize() {
 		failures.push(["statusSettingsLoadFailed", error]);
 	}
 
-	applySettings(settings);
+	if (settingsRevision === 0) {
+		applySettings(settings);
+	}
 
 	const records = await Promise.allSettled([renderHistory(), renderActivity()]);
 	for (const result of records) {
@@ -141,7 +145,9 @@ function bindEventListeners() {
 
 	openHistoryButton.addEventListener("click", async () => {
 		await refreshHistory();
-		historyDialog.showModal();
+		if (!historyDialog.open) {
+			historyDialog.showModal();
+		}
 	});
 
 	closeHistoryButton.addEventListener("click", () => {
@@ -186,7 +192,11 @@ function renderRuntimeInfo() {
 }
 
 async function renderHistory() {
+	const revision = ++historyRenderRevision;
 	const stored = await chrome.storage.local.get(SAVE_HISTORY_KEY);
+	if (revision !== historyRenderRevision) {
+		return;
+	}
 	const history = Array.isArray(stored[SAVE_HISTORY_KEY])
 		? stored[SAVE_HISTORY_KEY]
 		: [];
@@ -250,7 +260,11 @@ async function renderHistory() {
 }
 
 async function renderActivity() {
+	const revision = ++activityRenderRevision;
 	const stored = await chrome.storage.local.get(RECENT_ACTIVITY_KEY);
+	if (revision !== activityRenderRevision) {
+		return;
+	}
 	const activity = Array.isArray(stored[RECENT_ACTIVITY_KEY])
 		? stored[RECENT_ACTIVITY_KEY]
 		: [];

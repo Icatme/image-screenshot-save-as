@@ -551,3 +551,16 @@ test("a capture finished before worker termination is not relabeled as interrupt
     assert.equal(state.captures, 0);
   });
 });
+
+test("a closed source tab fails with the localized tab-changed error instead of Chrome's raw error", async () => {
+  await withHandler({}, async (state) => {
+    await state.open();
+    globalThis.chrome.tabs.get = async () => {
+      throw new Error("No tab with id: 7.");
+    };
+    const response = await state.send();
+    assert.equal(response.ok, false);
+    assert.equal(response.error, "errorScreenshotTabChanged");
+    assert.equal(state.captures, 0);
+  });
+});

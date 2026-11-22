@@ -14,6 +14,7 @@ test("numbered screenshots preserve ordering, format, and partial status", () =>
   assert.throws(() => buildScreenshotPageFilename("Report.png", 0), RangeError);
   assert.throws(() => buildScreenshotPageFilename("Report.zip", 1), TypeError);
   assert.ok(buildScreenshotPageFilename(`${"x".repeat(300)}.png`, 12).endsWith("-012.png"));
+  assert.equal(buildScreenshotPageFilename("---.png", 1), "screenshot-001.png");
 });
 
 test("buildDownloadPath decodes the image name and replaces unsafe characters", () => {
