@@ -464,17 +464,8 @@
         display: none;
       }
 
-      .activity-block {
-        margin-top: var(--space-lg);
-        padding-top: var(--space-lg);
-        border-top: 1px solid var(--line);
-      }
-
-      .activity-title {
-        margin: 0 0 var(--space-sm);
-        font-family: var(--font-display);
-        font-size: 20px;
-        letter-spacing: -0.02em;
+      .records-actions {
+        margin-top: 0;
       }
 
       .empty {
@@ -498,12 +489,22 @@
         box-shadow: var(--shadow-modal);
       }
 
+      dialog[open] {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
       dialog::backdrop {
         background: var(--overlay);
         backdrop-filter: blur(6px);
       }
 
       .dialog-body {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        flex: 1;
         padding: var(--space-lg);
       }
 
@@ -520,6 +521,106 @@
         font-family: var(--font-display);
         font-size: 1.8rem;
         letter-spacing: -0.04em;
+      }
+
+      .dialog-tabs {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2xs);
+        align-self: flex-start;
+        max-width: 100%;
+        margin-bottom: var(--space-md);
+        padding: var(--space-2xs);
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+      }
+
+      .dialog-tab {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-xs);
+        min-height: 36px;
+        padding: var(--space-xs) var(--space-md);
+        border-radius: 999px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+
+      .dialog-tab[aria-selected="true"] {
+        background: var(--paper);
+        color: var(--ink);
+        border-color: var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .tab-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 22px;
+        padding: 1px 7px;
+        border-radius: 999px;
+        background: var(--panel-strong);
+        color: var(--muted);
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .dialog-tab[aria-selected="true"] .tab-count {
+        background: var(--accent-soft);
+        color: var(--accent-strong);
+      }
+
+      .dialog-panel {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        flex: 1;
+        gap: var(--space-md);
+      }
+
+      .dialog-panel[hidden] {
+        display: none;
+      }
+
+      .dialog-scroll {
+        min-height: 0;
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 2px;
+      }
+
+      .pagination-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-sm);
+        padding-top: var(--space-sm);
+        border-top: 1px solid var(--line);
+      }
+
+      .pagination-bar[hidden] {
+        display: none;
+      }
+
+      .pagination-button {
+        min-height: 36px;
+        padding: var(--space-xs) var(--space-md);
+        font-size: 13px;
+      }
+
+      .pagination-status {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        text-align: center;
       }
 
       .list {
@@ -628,6 +729,16 @@
         button.secondary:hover {
           background: var(--panel-strong);
         }
+
+        .dialog-tab:hover {
+          transform: none;
+          color: var(--ink);
+          background: color-mix(in oklch, var(--paper) 65%, transparent);
+        }
+
+        .dialog-tab[aria-selected="true"]:hover {
+          background: var(--paper);
+        }
       }
 
       @media (max-width: 900px) {
@@ -681,6 +792,15 @@
           padding: var(--space-md);
         }
 
+        .dialog-tabs {
+          display: flex;
+          width: 100%;
+        }
+
+        .pagination-bar {
+          flex-wrap: wrap;
+        }
+
         .actions {
           flex-direction: column;
           align-items: stretch;
@@ -688,6 +808,15 @@
 
         button {
           width: 100%;
+        }
+
+        .dialog-tab {
+          flex: 1;
+          width: auto;
+        }
+
+        .pagination-button {
+          width: auto;
         }
       }
 
@@ -787,6 +916,26 @@
 
           <section class="panel">
             <div class="panel-copy">
+              <h2 id="panel-screenshot-title">网页截图</h2>
+              <p id="panel-screenshot-body">设置页面右键菜单第一层直接使用的截图格式；其他格式保留在“其他格式”子菜单中。</p>
+            </div>
+
+            <div class="field-grid">
+              <div class="field">
+                <label for="default-screenshot-format" id="default-screenshot-format-label">默认截图格式</label>
+                <div class="select-wrap">
+                  <select id="default-screenshot-format" name="defaultScreenshotFormat">
+                    <option value="png">PNG</option>
+                    <option value="jpg">JPG</option>
+                    <option value="webp">WebP</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-copy">
               <h2 id="panel-quality-title">导出质量</h2>
               <p id="panel-quality-body">PNG 始终无损。JPG 和 WebP 使用下面的质量值，范围 0.10 到 1.00。</p>
             </div>
@@ -811,10 +960,15 @@
           <section class="panel">
             <div class="panel-copy">
               <h2 id="panel-save-mode-title">保存方式</h2>
-              <p id="panel-save-mode-body">开启后使用静默保存。默认保存到浏览器的 Downloads 目录。</p>
+              <p id="panel-save-mode-body">控制保存后是否自动复制最终本地文件路径（与右键菜单勾选状态同步），以及是否静默保存到浏览器默认的 Downloads 目录。</p>
             </div>
 
             <div class="field-grid">
+              <label class="toggle" for="copy-path-after-save">
+                <input id="copy-path-after-save" name="copyPathAfterSave" type="checkbox" checked>
+                <span id="copy-path-after-save-label">保存后复制文件路径</span>
+              </label>
+
               <label class="toggle" for="silent-save">
                 <input id="silent-save" name="silentSave" type="checkbox">
                 <span id="silent-save-label">开启静默保存</span>
@@ -825,19 +979,14 @@
           <section class="panel">
             <div class="panel-copy">
               <h2 id="panel-history-title">保存历史</h2>
-              <p id="panel-history-body">历史记录保存在浏览器本地存储中。可按需查看或清空。</p>
+              <p id="panel-history-body">保存历史与最近活动存储在浏览器本地，可按需查看或在这里一并清空。</p>
             </div>
 
             <div class="records-content">
-              <div class="actions">
+              <div class="actions records-actions">
                 <button id="open-history-button" type="button">查看历史记录</button>
                 <button class="secondary" id="clear-history-button" type="button">清空历史</button>
               </div>
-
-              <section class="activity-block" aria-labelledby="activity-title">
-                <h3 class="activity-title" id="activity-title">最近活动</h3>
-                <ol class="list compact" id="activity-list" aria-live="polite"></ol>
-              </section>
             </div>
           </section>
 
@@ -854,7 +1003,54 @@
           <h2 class="dialog-title" id="history-dialog-title">保存历史</h2>
           <button class="secondary" id="close-history-button" type="button">关闭</button>
         </div>
-        <ol class="list" id="history-list" aria-live="polite"></ol>
+
+        <div class="dialog-tabs" id="records-tablist" role="tablist" aria-label="记录分类">
+          <button
+            class="dialog-tab"
+            id="tab-history"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="history-panel"
+          >
+            <span id="tab-history-label">保存历史</span>
+            <span class="tab-count" id="tab-history-count">0</span>
+          </button>
+          <button
+            class="dialog-tab"
+            id="tab-activity"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="activity-panel"
+            tabindex="-1"
+          >
+            <span id="tab-activity-label">最近活动</span>
+            <span class="tab-count" id="tab-activity-count">0</span>
+          </button>
+        </div>
+
+        <section class="dialog-panel" id="history-panel" role="tabpanel" aria-labelledby="tab-history">
+          <div class="dialog-scroll" id="history-scroll">
+            <ol class="list" id="history-list" aria-live="polite"></ol>
+          </div>
+          <nav class="pagination-bar" id="history-pagination" aria-label="记录分页" hidden>
+            <button class="secondary pagination-button" id="history-prev-button" type="button">上一页</button>
+            <span class="pagination-status" id="history-page-info" aria-live="polite"></span>
+            <button class="secondary pagination-button" id="history-next-button" type="button">下一页</button>
+          </nav>
+        </section>
+
+        <section class="dialog-panel" id="activity-panel" role="tabpanel" aria-labelledby="tab-activity" hidden>
+          <div class="dialog-scroll" id="activity-scroll">
+            <ol class="list compact" id="activity-list" aria-live="polite"></ol>
+          </div>
+          <nav class="pagination-bar" id="activity-pagination" aria-label="记录分页" hidden>
+            <button class="secondary pagination-button" id="activity-prev-button" type="button">上一页</button>
+            <span class="pagination-status" id="activity-page-info" aria-live="polite"></span>
+            <button class="secondary pagination-button" id="activity-next-button" type="button">下一页</button>
+          </nav>
+        </section>
       </div>
     </dialog>
 

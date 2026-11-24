@@ -124,14 +124,28 @@
   "menuRoot": {
     "message": "图片另存为"
   },
-  "menuActionSave": {
-    "message": "保存"
+  "menuImageOriginal": {
+    "message": "保存原图"
   },
-  "menuActionCopyPath": {
-    "message": "保存 && 复制路径"
+  "menuCopyPathAfterSave": {
+    "message": "保存后复制文件路径"
   },
   "menuScreenshotRoot": {
     "message": "网页截图另存为"
+  },
+  "menuScreenshotModeWithFormat": {
+    "message": "$MODE$（$FORMAT$）",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      },
+      "format": {
+        "content": "$2"
+      }
+    }
+  },
+  "menuScreenshotOtherFormats": {
+    "message": "其他格式"
   },
   "menuScreenshotVisible": {
     "message": "可视区域"
@@ -366,6 +380,15 @@
   "languageOptionGerman": {
     "message": "Deutsch"
   },
+  "panelScreenshotTitle": {
+    "message": "网页截图"
+  },
+  "panelScreenshotBody": {
+    "message": "设置页面右键菜单第一层直接使用的截图格式；其他格式保留在“其他格式”子菜单中。"
+  },
+  "labelDefaultScreenshotFormat": {
+    "message": "默认截图格式"
+  },
   "panelQualityTitle": {
     "message": "导出质量"
   },
@@ -382,7 +405,10 @@
     "message": "保存方式"
   },
   "panelSaveModeBody": {
-    "message": "开启后使用静默保存。默认保存到浏览器的 Downloads 目录。"
+    "message": "控制保存后是否自动复制最终本地文件路径（与右键菜单勾选状态同步），以及是否静默保存到浏览器默认的 Downloads 目录。"
+  },
+  "toggleCopyPathAfterSave": {
+    "message": "保存后复制文件路径"
   },
   "toggleSilentSave": {
     "message": "开启静默保存"
@@ -391,7 +417,7 @@
     "message": "保存历史"
   },
   "panelHistoryBody": {
-    "message": "历史记录保存在浏览器本地存储中，可按需查看或在这里清空。"
+    "message": "保存历史与最近活动存储在浏览器本地，可按需查看或在这里一并清空。"
   },
   "buttonOpenHistory": {
     "message": "查看历史记录"
@@ -480,13 +506,39 @@
     "message": "无法清空历史。"
   },
   "confirmClearHistory": {
-    "message": "确定清空全部保存历史吗？此操作无法撤销。"
+    "message": "确定清空全部保存历史和最近活动吗？此操作无法撤销。"
   },
   "panelActivityTitle": {
     "message": "最近活动"
   },
   "activityEmpty": {
     "message": "暂无最近活动。"
+  },
+  "historyTabsLabel": {
+    "message": "记录分类"
+  },
+  "historyPaginationLabel": {
+    "message": "记录分页"
+  },
+  "buttonPreviousPage": {
+    "message": "上一页"
+  },
+  "buttonNextPage": {
+    "message": "下一页"
+  },
+  "historyPaginationStatus": {
+    "message": "第 $PAGE$ / $TOTAL$ 页 · 共 $COUNT$ 条",
+    "placeholders": {
+      "page": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      },
+      "count": {
+        "content": "$3"
+      }
+    }
   },
   "errorImageRequestTimedOut": {
     "message": "请求图片超时。"

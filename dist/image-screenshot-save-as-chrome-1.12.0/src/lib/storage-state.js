@@ -67,9 +67,14 @@ export function appendSaveHistory(entry) {
 }
 
 export function clearSaveHistory() {
-	return enqueueMutation(localMutationQueues, SAVE_HISTORY_KEY, () => {
-		return chrome.storage.local.remove(SAVE_HISTORY_KEY);
-	});
+	return Promise.all([
+		enqueueMutation(localMutationQueues, SAVE_HISTORY_KEY, () => {
+			return chrome.storage.local.remove(SAVE_HISTORY_KEY);
+		}),
+		enqueueMutation(localMutationQueues, RECENT_ACTIVITY_KEY, () => {
+			return chrome.storage.local.remove(RECENT_ACTIVITY_KEY);
+		}),
+	]).then(() => undefined);
 }
 
 export function sanitizeSaveHistory() {

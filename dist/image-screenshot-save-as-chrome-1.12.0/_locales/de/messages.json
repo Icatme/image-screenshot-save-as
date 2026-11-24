@@ -124,14 +124,28 @@
   "menuRoot": {
     "message": "Bild speichern unter"
   },
-  "menuActionSave": {
-    "message": "Speichern"
+  "menuImageOriginal": {
+    "message": "Original speichern"
   },
-  "menuActionCopyPath": {
-    "message": "Speichern && Pfad kopieren"
+  "menuCopyPathAfterSave": {
+    "message": "Dateipfad nach dem Speichern kopieren"
   },
   "menuScreenshotRoot": {
     "message": "Seiten-Screenshot speichern unter"
+  },
+  "menuScreenshotModeWithFormat": {
+    "message": "$MODE$ ($FORMAT$)",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      },
+      "format": {
+        "content": "$2"
+      }
+    }
+  },
+  "menuScreenshotOtherFormats": {
+    "message": "Weitere Formate"
   },
   "menuScreenshotVisible": {
     "message": "Sichtbare Seite"
@@ -366,6 +380,15 @@
   "languageOptionGerman": {
     "message": "Deutsch"
   },
+  "panelScreenshotTitle": {
+    "message": "Seiten-Screenshots"
+  },
+  "panelScreenshotBody": {
+    "message": "Wähle das Standardformat, das direkt im Menü für Seiten-Screenshots erscheint. Weitere Formate bleiben unter Weitere Formate."
+  },
+  "labelDefaultScreenshotFormat": {
+    "message": "Standard-Screenshot-Format"
+  },
   "panelQualityTitle": {
     "message": "Exportqualität"
   },
@@ -382,7 +405,10 @@
     "message": "Speichermodus"
   },
   "panelSaveModeBody": {
-    "message": "Wenn aktiviert, speichert die Erweiterung ohne Rückfrage. Dateien werden im Standardordner Downloads des Browsers gespeichert."
+    "message": "Lege fest, ob der endgültige lokale Dateipfad nach dem Speichern kopiert wird (synchron mit dem Kontextmenü) und ob Dateien still im Standardordner Downloads gespeichert werden."
+  },
+  "toggleCopyPathAfterSave": {
+    "message": "Dateipfad nach dem Speichern kopieren"
   },
   "toggleSilentSave": {
     "message": "Stilles Speichern aktivieren"
@@ -391,7 +417,7 @@
     "message": "Speicherverlauf"
   },
   "panelHistoryBody": {
-    "message": "Der Verlauf bleibt im lokalen Browserspeicher. Bei Bedarf kann er hier geöffnet oder gelöscht werden."
+    "message": "Speicherverlauf und letzte Aktivitäten bleiben im lokalen Browserspeicher. Sie können hier bei Bedarf geöffnet oder gemeinsam gelöscht werden."
   },
   "buttonOpenHistory": {
     "message": "Verlauf anzeigen"
@@ -480,13 +506,39 @@
     "message": "Der Verlauf konnte nicht gelöscht werden."
   },
   "confirmClearHistory": {
-    "message": "Gesamten Speicherverlauf löschen? Dies kann nicht rückgängig gemacht werden."
+    "message": "Gesamten Speicherverlauf und alle letzten Aktivitäten löschen? Dies kann nicht rückgängig gemacht werden."
   },
   "panelActivityTitle": {
     "message": "Letzte Aktivitäten"
   },
   "activityEmpty": {
     "message": "Noch keine Aktivitäten."
+  },
+  "historyTabsLabel": {
+    "message": "Eintragsansichten"
+  },
+  "historyPaginationLabel": {
+    "message": "Eintragsseiten"
+  },
+  "buttonPreviousPage": {
+    "message": "Zurück"
+  },
+  "buttonNextPage": {
+    "message": "Weiter"
+  },
+  "historyPaginationStatus": {
+    "message": "Seite $PAGE$ / $TOTAL$ · $COUNT$ Einträge",
+    "placeholders": {
+      "page": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      },
+      "count": {
+        "content": "$3"
+      }
+    }
   },
   "errorImageRequestTimedOut": {
     "message": "Zeitüberschreitung bei der Bildanfrage."

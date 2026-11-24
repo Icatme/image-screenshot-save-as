@@ -8,15 +8,22 @@ import {
 const SAVE_HISTORY_KEY = "saveHistory";
 const RECENT_ACTIVITY_KEY = "recentActivity";
 const AUTO_SAVE_DELAY_MS = 240;
+const RECORDS_PAGE_SIZE = 5;
 
 let activeLocale = "en";
 let translate = (messageName) => messageName;
 let autoSaveTimeoutId = null;
 let toastTimeoutId = null;
 let settingsMutationQueue = Promise.resolve();
+let activeSettingsMutations = 0;
 let settingsRevision = 0;
 let historyRenderRevision = 0;
 let activityRenderRevision = 0;
+let activeRecordsTab = "history";
+let historyEntries = [];
+let activityEntries = [];
+let historyPage = 1;
+let activityPage = 1;
 
 const form = document.getElementById("settings-form");
 const productName = document.getElementById("product-name");
@@ -37,8 +44,20 @@ const panelLanguageTitle = document.getElementById("panel-language-title");
 const panelLanguageBody = document.getElementById("panel-language-body");
 const localeOverrideLabel = document.getElementById("locale-override-label");
 const localeOverrideSelect = document.getElementById("locale-override");
+const panelScreenshotTitle = document.getElementById("panel-screenshot-title");
+const panelScreenshotBody = document.getElementById("panel-screenshot-body");
+const defaultScreenshotFormatLabel = document.getElementById(
+	"default-screenshot-format-label",
+);
+const defaultScreenshotFormatSelect = document.getElementById(
+	"default-screenshot-format",
+);
 const jpgQualityInput = document.getElementById("jpg-quality");
 const webpQualityInput = document.getElementById("webp-quality");
+const copyPathAfterSaveInput = document.getElementById("copy-path-after-save");
+const copyPathAfterSaveLabel = document.getElementById(
+	"copy-path-after-save-label",
+);
 const silentSaveInput = document.getElementById("silent-save");
 const optionsHeading = document.getElementById("options-heading");
 const optionsIntro = document.getElementById("options-intro");
@@ -57,9 +76,27 @@ const closeHistoryButton = document.getElementById("close-history-button");
 const clearHistoryButton = document.getElementById("clear-history-button");
 const historyDialog = document.getElementById("history-dialog");
 const historyDialogTitle = document.getElementById("history-dialog-title");
+const recordsTablist = document.getElementById("records-tablist");
+const historyTabButton = document.getElementById("tab-history");
+const historyTabLabel = document.getElementById("tab-history-label");
+const historyTabCount = document.getElementById("tab-history-count");
+const activityTabButton = document.getElementById("tab-activity");
+const activityTabLabel = document.getElementById("tab-activity-label");
+const activityTabCount = document.getElementById("tab-activity-count");
+const historyPanel = document.getElementById("history-panel");
+const activityPanel = document.getElementById("activity-panel");
+const historyScroll = document.getElementById("history-scroll");
+const activityScroll = document.getElementById("activity-scroll");
 const historyList = document.getElementById("history-list");
-const activityTitle = document.getElementById("activity-title");
 const activityList = document.getElementById("activity-list");
+const historyPagination = document.getElementById("history-pagination");
+const historyPrevButton = document.getElementById("history-prev-button");
+const historyPageInfo = document.getElementById("history-page-info");
+const historyNextButton = document.getElementById("history-next-button");
+const activityPagination = document.getElementById("activity-pagination");
+const activityPrevButton = document.getElementById("activity-prev-button");
+const activityPageInfo = document.getElementById("activity-page-info");
+const activityNextButton = document.getElementById("activity-next-button");
 const autoSaveHint = document.getElementById("auto-save-hint");
 const operationStatus = document.getElementById("operation-status");
 const toast = document.getElementById("toast");
@@ -67,6 +104,7 @@ const toast = document.getElementById("toast");
 void initialize();
 
 async function initialize() {
+	setActiveRecordsTab(activeRecordsTab);
 	bindEventListeners();
 	form.setAttribute("aria-busy", "true");
 	renderRuntimeInfo();
@@ -131,6 +169,14 @@ function bindEventListeners() {
 		void persistSettings({ refreshRecords: true });
 	});
 
+	defaultScreenshotFormatSelect.addEventListener("change", () => {
+		void persistSettings({ refreshRecords: false });
+	});
+
+	copyPathAfterSaveInput.addEventListener("change", () => {
+		void persistSettings({ refreshRecords: false });
+	});
+
 	silentSaveInput.addEventListener("change", () => {
 		void persistSettings({ refreshRecords: false });
 	});
@@ -144,7 +190,11 @@ function bindEventListeners() {
 	});
 
 	openHistoryButton.addEventListener("click", async () => {
-		await refreshHistory();
+		historyPage = 1;
+		activityPage = 1;
+		await Promise.all([refreshHistory(), refreshActivity()]);
+		historyScroll.scrollTop = 0;
+		activityScroll.scrollTop = 0;
 		if (!historyDialog.open) {
 			historyDialog.showModal();
 		}
@@ -154,7 +204,50 @@ function bindEventListeners() {
 		historyDialog.close();
 	});
 
+	historyDialog.addEventListener("click", (event) => {
+		if (event.target === historyDialog) {
+			historyDialog.close();
+		}
+	});
+
+	historyTabButton.addEventListener("click", () => {
+		setActiveRecordsTab("history");
+	});
+
+	activityTabButton.addEventListener("click", () => {
+		setActiveRecordsTab("activity");
+	});
+
+	historyTabButton.addEventListener("keydown", (event) => {
+		handleRecordsTabKeydown(event);
+	});
+
+	activityTabButton.addEventListener("keydown", (event) => {
+		handleRecordsTabKeydown(event);
+	});
+
+	historyPrevButton.addEventListener("click", () => {
+		setHistoryPage(historyPage - 1);
+	});
+
+	historyNextButton.addEventListener("click", () => {
+		setHistoryPage(historyPage + 1);
+	});
+
+	activityPrevButton.addEventListener("click", () => {
+		setActivityPage(activityPage - 1);
+	});
+
+	activityNextButton.addEventListener("click", () => {
+		setActivityPage(activityPage + 1);
+	});
+
 	chrome.storage.onChanged.addListener((changes, areaName) => {
+		if (areaName === "sync") {
+			void syncExternalSettings(changes);
+			return;
+		}
+
 		if (areaName !== "local") {
 			return;
 		}
@@ -169,10 +262,45 @@ function bindEventListeners() {
 	});
 }
 
+async function syncExternalSettings(changes) {
+	if (autoSaveTimeoutId !== null || activeSettingsMutations > 0) {
+		return;
+	}
+	const revision = settingsRevision;
+	try {
+		const latest = await getSettings();
+		if (
+			revision !== settingsRevision ||
+			autoSaveTimeoutId !== null ||
+			activeSettingsMutations > 0
+		) {
+			return;
+		}
+		if (changes.localeOverride) {
+			await setLocale(latest.localeOverride, revision);
+			if (
+				revision !== settingsRevision ||
+				autoSaveTimeoutId !== null ||
+				activeSettingsMutations > 0
+			) {
+				return;
+			}
+			applySettings(latest);
+			await Promise.all([refreshHistory(), refreshActivity()]);
+			return;
+		}
+		applySettings(latest);
+	} catch (error) {
+		showOperationErrors([["statusSettingsLoadFailed", error]]);
+	}
+}
+
 function applySettings(settings) {
 	localeOverrideSelect.value = settings.localeOverride;
+	defaultScreenshotFormatSelect.value = settings.defaultScreenshotFormat;
 	jpgQualityInput.value = String(settings.jpgQuality);
 	webpQualityInput.value = String(settings.webpQuality);
+	copyPathAfterSaveInput.checked = settings.copyPathAfterSave;
 	silentSaveInput.checked = settings.silentSave;
 	updateQualityLabel(jpgQualityLabel, "labelJpgQuality", settings.jpgQuality);
 	updateQualityLabel(
@@ -197,18 +325,37 @@ async function renderHistory() {
 	if (revision !== historyRenderRevision) {
 		return;
 	}
-	const history = Array.isArray(stored[SAVE_HISTORY_KEY])
+	historyEntries = Array.isArray(stored[SAVE_HISTORY_KEY])
 		? stored[SAVE_HISTORY_KEY]
 		: [];
+	historyTabCount.textContent = String(historyEntries.length);
+	renderHistoryPage();
+}
+
+function renderHistoryPage() {
+	const { page, totalPages, totalItems, pageItems } = paginateItems(
+		historyEntries,
+		historyPage,
+	);
+	historyPage = page;
+	updatePaginationControls({
+		container: historyPagination,
+		prevButton: historyPrevButton,
+		nextButton: historyNextButton,
+		infoElement: historyPageInfo,
+		page,
+		totalPages,
+		totalItems,
+	});
 
 	historyList.textContent = "";
 
-	if (history.length === 0) {
+	if (pageItems.length === 0) {
 		renderListMessage(historyList, t("historyEmpty"));
 		return;
 	}
 
-	for (const item of history) {
+	for (const item of pageItems) {
 		const rawPath = item.finalPath || item.requestedPath || "";
 		const meta = [
 			item.format ? item.format.toUpperCase() : "",
@@ -265,18 +412,37 @@ async function renderActivity() {
 	if (revision !== activityRenderRevision) {
 		return;
 	}
-	const activity = Array.isArray(stored[RECENT_ACTIVITY_KEY])
+	activityEntries = Array.isArray(stored[RECENT_ACTIVITY_KEY])
 		? stored[RECENT_ACTIVITY_KEY]
 		: [];
+	activityTabCount.textContent = String(activityEntries.length);
+	renderActivityPage();
+}
+
+function renderActivityPage() {
+	const { page, totalPages, totalItems, pageItems } = paginateItems(
+		activityEntries,
+		activityPage,
+	);
+	activityPage = page;
+	updatePaginationControls({
+		container: activityPagination,
+		prevButton: activityPrevButton,
+		nextButton: activityNextButton,
+		infoElement: activityPageInfo,
+		page,
+		totalPages,
+		totalItems,
+	});
 
 	activityList.textContent = "";
 
-	if (activity.length === 0) {
+	if (pageItems.length === 0) {
 		renderListMessage(activityList, t("activityEmpty"));
 		return;
 	}
 
-	for (const item of activity) {
+	for (const item of pageItems) {
 		const listItem = document.createElement("li");
 		listItem.className = "list-item";
 		listItem.dataset.status = ["error", "warning"].includes(item.status)
@@ -300,6 +466,89 @@ async function renderActivity() {
 		listItem.append(headDiv, messageDiv);
 		activityList.append(listItem);
 	}
+}
+
+function setActiveRecordsTab(tabName, { focus = false } = {}) {
+	activeRecordsTab = tabName === "activity" ? "activity" : "history";
+	const isHistory = activeRecordsTab === "history";
+	historyTabButton.setAttribute("aria-selected", String(isHistory));
+	historyTabButton.tabIndex = isHistory ? 0 : -1;
+	activityTabButton.setAttribute("aria-selected", String(!isHistory));
+	activityTabButton.tabIndex = isHistory ? -1 : 0;
+	historyPanel.hidden = !isHistory;
+	activityPanel.hidden = isHistory;
+	if (focus) {
+		(isHistory ? historyTabButton : activityTabButton).focus?.();
+	}
+}
+
+function handleRecordsTabKeydown(event) {
+	if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+		event.preventDefault();
+		setActiveRecordsTab(
+			activeRecordsTab === "history" ? "activity" : "history",
+			{ focus: true },
+		);
+		return;
+	}
+
+	if (event.key === "Home") {
+		event.preventDefault();
+		setActiveRecordsTab("history", { focus: true });
+		return;
+	}
+
+	if (event.key === "End") {
+		event.preventDefault();
+		setActiveRecordsTab("activity", { focus: true });
+	}
+}
+
+function setHistoryPage(nextPage) {
+	historyPage = nextPage;
+	renderHistoryPage();
+	historyScroll.scrollTop = 0;
+}
+
+function setActivityPage(nextPage) {
+	activityPage = nextPage;
+	renderActivityPage();
+	activityScroll.scrollTop = 0;
+}
+
+function paginateItems(items, requestedPage) {
+	const totalItems = items.length;
+	const totalPages = Math.max(1, Math.ceil(totalItems / RECORDS_PAGE_SIZE));
+	const page = Math.min(Math.max(1, requestedPage), totalPages);
+	const startIndex = (page - 1) * RECORDS_PAGE_SIZE;
+	return {
+		page,
+		totalPages,
+		totalItems,
+		pageItems: items.slice(startIndex, startIndex + RECORDS_PAGE_SIZE),
+	};
+}
+
+function updatePaginationControls({
+	container,
+	prevButton,
+	nextButton,
+	infoElement,
+	page,
+	totalPages,
+	totalItems,
+}) {
+	const showPagination = totalPages > 1;
+	container.hidden = !showPagination;
+	prevButton.disabled = page <= 1;
+	nextButton.disabled = page >= totalPages;
+	infoElement.textContent = showPagination
+		? t("historyPaginationStatus", [
+				String(page),
+				String(totalPages),
+				String(totalItems),
+			])
+		: "";
 }
 
 function getPartialCaptureMeta(item) {
@@ -400,14 +649,26 @@ function localizeStaticContent() {
 	setLocaleOptionText("zh_TW", t("languageOptionZhTw"));
 	setLocaleOptionText("es", t("languageOptionSpanish"));
 	setLocaleOptionText("de", t("languageOptionGerman"));
+	panelScreenshotTitle.textContent = t("panelScreenshotTitle");
+	panelScreenshotBody.textContent = t("panelScreenshotBody");
+	defaultScreenshotFormatLabel.textContent = t("labelDefaultScreenshotFormat");
 	panelQualityTitle.textContent = t("panelQualityTitle");
 	panelQualityBody.textContent = t("panelQualityBody");
 	panelSaveModeTitle.textContent = t("panelSaveModeTitle");
 	panelSaveModeBody.textContent = t("panelSaveModeBody");
+	copyPathAfterSaveLabel.textContent = t("toggleCopyPathAfterSave");
 	silentSaveLabel.textContent = t("toggleSilentSave");
 	panelHistoryTitle.textContent = t("panelHistoryTitle");
 	panelHistoryBody.textContent = t("panelHistoryBody");
-	activityTitle.textContent = t("panelActivityTitle");
+	recordsTablist.setAttribute("aria-label", t("historyTabsLabel"));
+	historyTabLabel.textContent = t("dialogHistoryTitle");
+	activityTabLabel.textContent = t("panelActivityTitle");
+	historyPagination.setAttribute("aria-label", t("historyPaginationLabel"));
+	activityPagination.setAttribute("aria-label", t("historyPaginationLabel"));
+	historyPrevButton.textContent = t("buttonPreviousPage");
+	historyNextButton.textContent = t("buttonNextPage");
+	activityPrevButton.textContent = t("buttonPreviousPage");
+	activityNextButton.textContent = t("buttonNextPage");
 	autoSaveHint.textContent = t("statusSettingsAutoSave");
 	resetButton.textContent = t("buttonResetSettings");
 	openHistoryButton.textContent = t("buttonOpenHistory");
@@ -455,6 +716,7 @@ function scheduleAutoSave() {
 	const revision = ++settingsRevision;
 	const requestedSettings = readSettingsForm();
 	autoSaveTimeoutId = window.setTimeout(() => {
+		autoSaveTimeoutId = null;
 		void queueSettingsMutation(() => persistSettingsNow({
 			refreshRecords: false, requestedSettings, revision,
 		}));
@@ -464,14 +726,17 @@ function scheduleAutoSave() {
 function readSettingsForm() {
 	return {
 		localeOverride: localeOverrideSelect.value,
+		defaultScreenshotFormat: defaultScreenshotFormatSelect.value,
 		jpgQuality: jpgQualityInput.value,
 		webpQuality: webpQualityInput.value,
+		copyPathAfterSave: copyPathAfterSaveInput.checked,
 		silentSave: silentSaveInput.checked,
 	};
 }
 
 function persistSettings(options) {
 	window.clearTimeout(autoSaveTimeoutId);
+	autoSaveTimeoutId = null;
 	const revision = ++settingsRevision;
 	const requestedSettings = readSettingsForm();
 	return queueSettingsMutation(() =>
@@ -480,6 +745,7 @@ function persistSettings(options) {
 }
 
 async function persistSettingsNow({ refreshRecords, requestedSettings, revision }) {
+	activeSettingsMutations += 1;
 	try {
 		const saved = await saveSettings(requestedSettings);
 		if (revision !== settingsRevision) return;
@@ -494,11 +760,14 @@ async function persistSettingsNow({ refreshRecords, requestedSettings, revision 
 		}
 	} catch (error) {
 		showOperationErrors([["statusSettingsSaveFailed", error]]);
+	} finally {
+		activeSettingsMutations -= 1;
 	}
 }
 
 function restoreDefaults() {
 	window.clearTimeout(autoSaveTimeoutId);
+	autoSaveTimeoutId = null;
 	const revision = ++settingsRevision;
 	applySettings(DEFAULT_SETTINGS);
 	resetButton.disabled = true;
@@ -506,6 +775,7 @@ function restoreDefaults() {
 }
 
 async function restoreDefaultsNow(revision) {
+	activeSettingsMutations += 1;
 	try {
 		const saved = await saveSettings(DEFAULT_SETTINGS);
 		if (revision !== settingsRevision) return;
@@ -518,6 +788,7 @@ async function restoreDefaultsNow(revision) {
 	} catch (error) {
 		showOperationErrors([["statusSettingsSaveFailed", error]]);
 	} finally {
+		activeSettingsMutations -= 1;
 		resetButton.disabled = false;
 	}
 }
@@ -543,7 +814,9 @@ async function clearHistory() {
 			throw new Error(response?.error || t("statusHistoryClearFailed"));
 		}
 
-		await renderHistory();
+		historyPage = 1;
+		activityPage = 1;
+		await Promise.all([renderHistory(), renderActivity()]);
 		setOperationStatus(t("statusHistoryCleared"), "success");
 		showToast(t("statusHistoryCleared"));
 	} catch (error) {
@@ -558,6 +831,10 @@ async function refreshHistory() {
 		await renderHistory();
 	} catch (error) {
 		const message = formatOperationError("statusHistoryLoadFailed", error);
+		historyEntries = [];
+		historyPage = 1;
+		historyTabCount.textContent = "0";
+		historyPagination.hidden = true;
 		renderListMessage(historyList, message, "error");
 		setOperationStatus(message, "error");
 	}
@@ -568,6 +845,10 @@ async function refreshActivity() {
 		await renderActivity();
 	} catch (error) {
 		const message = formatOperationError("statusHistoryLoadFailed", error);
+		activityEntries = [];
+		activityPage = 1;
+		activityTabCount.textContent = "0";
+		activityPagination.hidden = true;
 		renderListMessage(activityList, message, "error");
 		setOperationStatus(message, "error");
 	}
