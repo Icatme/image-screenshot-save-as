@@ -391,7 +391,7 @@
     "message": "Save History"
   },
   "panelHistoryBody": {
-    "message": "History stays in local browser storage. Open it when needed or clear it here."
+    "message": "Save history and recent activity stay in local browser storage. Open them when needed or clear them here."
   },
   "buttonOpenHistory": {
     "message": "View History"
@@ -480,13 +480,39 @@
     "message": "History could not be cleared."
   },
   "confirmClearHistory": {
-    "message": "Clear all saved history? This cannot be undone."
+    "message": "Clear all save history and recent activity? This cannot be undone."
   },
   "panelActivityTitle": {
     "message": "Recent activity"
   },
   "activityEmpty": {
     "message": "No recent activity yet."
+  },
+  "historyTabsLabel": {
+    "message": "Record views"
+  },
+  "historyPaginationLabel": {
+    "message": "Records pagination"
+  },
+  "buttonPreviousPage": {
+    "message": "Previous"
+  },
+  "buttonNextPage": {
+    "message": "Next"
+  },
+  "historyPaginationStatus": {
+    "message": "Page $PAGE$ / $TOTAL$ · $COUNT$ items",
+    "placeholders": {
+      "page": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      },
+      "count": {
+        "content": "$3"
+      }
+    }
   },
   "errorImageRequestTimedOut": {
     "message": "The image request timed out."

@@ -8,6 +8,7 @@ import {
 const SAVE_HISTORY_KEY = "saveHistory";
 const RECENT_ACTIVITY_KEY = "recentActivity";
 const AUTO_SAVE_DELAY_MS = 240;
+const RECORDS_PAGE_SIZE = 5;
 
 let activeLocale = "en";
 let translate = (messageName) => messageName;
@@ -17,6 +18,11 @@ let settingsMutationQueue = Promise.resolve();
 let settingsRevision = 0;
 let historyRenderRevision = 0;
 let activityRenderRevision = 0;
+let activeRecordsTab = "history";
+let historyEntries = [];
+let activityEntries = [];
+let historyPage = 1;
+let activityPage = 1;
 
 const form = document.getElementById("settings-form");
 const productName = document.getElementById("product-name");
@@ -57,9 +63,27 @@ const closeHistoryButton = document.getElementById("close-history-button");
 const clearHistoryButton = document.getElementById("clear-history-button");
 const historyDialog = document.getElementById("history-dialog");
 const historyDialogTitle = document.getElementById("history-dialog-title");
+const recordsTablist = document.getElementById("records-tablist");
+const historyTabButton = document.getElementById("tab-history");
+const historyTabLabel = document.getElementById("tab-history-label");
+const historyTabCount = document.getElementById("tab-history-count");
+const activityTabButton = document.getElementById("tab-activity");
+const activityTabLabel = document.getElementById("tab-activity-label");
+const activityTabCount = document.getElementById("tab-activity-count");
+const historyPanel = document.getElementById("history-panel");
+const activityPanel = document.getElementById("activity-panel");
+const historyScroll = document.getElementById("history-scroll");
+const activityScroll = document.getElementById("activity-scroll");
 const historyList = document.getElementById("history-list");
-const activityTitle = document.getElementById("activity-title");
 const activityList = document.getElementById("activity-list");
+const historyPagination = document.getElementById("history-pagination");
+const historyPrevButton = document.getElementById("history-prev-button");
+const historyPageInfo = document.getElementById("history-page-info");
+const historyNextButton = document.getElementById("history-next-button");
+const activityPagination = document.getElementById("activity-pagination");
+const activityPrevButton = document.getElementById("activity-prev-button");
+const activityPageInfo = document.getElementById("activity-page-info");
+const activityNextButton = document.getElementById("activity-next-button");
 const autoSaveHint = document.getElementById("auto-save-hint");
 const operationStatus = document.getElementById("operation-status");
 const toast = document.getElementById("toast");
@@ -67,6 +91,7 @@ const toast = document.getElementById("toast");
 void initialize();
 
 async function initialize() {
+	setActiveRecordsTab(activeRecordsTab);
 	bindEventListeners();
 	form.setAttribute("aria-busy", "true");
 	renderRuntimeInfo();
@@ -144,7 +169,11 @@ function bindEventListeners() {
 	});
 
 	openHistoryButton.addEventListener("click", async () => {
-		await refreshHistory();
+		historyPage = 1;
+		activityPage = 1;
+		await Promise.all([refreshHistory(), refreshActivity()]);
+		historyScroll.scrollTop = 0;
+		activityScroll.scrollTop = 0;
 		if (!historyDialog.open) {
 			historyDialog.showModal();
 		}
@@ -152,6 +181,44 @@ function bindEventListeners() {
 
 	closeHistoryButton.addEventListener("click", () => {
 		historyDialog.close();
+	});
+
+	historyDialog.addEventListener("click", (event) => {
+		if (event.target === historyDialog) {
+			historyDialog.close();
+		}
+	});
+
+	historyTabButton.addEventListener("click", () => {
+		setActiveRecordsTab("history");
+	});
+
+	activityTabButton.addEventListener("click", () => {
+		setActiveRecordsTab("activity");
+	});
+
+	historyTabButton.addEventListener("keydown", (event) => {
+		handleRecordsTabKeydown(event);
+	});
+
+	activityTabButton.addEventListener("keydown", (event) => {
+		handleRecordsTabKeydown(event);
+	});
+
+	historyPrevButton.addEventListener("click", () => {
+		setHistoryPage(historyPage - 1);
+	});
+
+	historyNextButton.addEventListener("click", () => {
+		setHistoryPage(historyPage + 1);
+	});
+
+	activityPrevButton.addEventListener("click", () => {
+		setActivityPage(activityPage - 1);
+	});
+
+	activityNextButton.addEventListener("click", () => {
+		setActivityPage(activityPage + 1);
 	});
 
 	chrome.storage.onChanged.addListener((changes, areaName) => {
@@ -197,18 +264,37 @@ async function renderHistory() {
 	if (revision !== historyRenderRevision) {
 		return;
 	}
-	const history = Array.isArray(stored[SAVE_HISTORY_KEY])
+	historyEntries = Array.isArray(stored[SAVE_HISTORY_KEY])
 		? stored[SAVE_HISTORY_KEY]
 		: [];
+	historyTabCount.textContent = String(historyEntries.length);
+	renderHistoryPage();
+}
+
+function renderHistoryPage() {
+	const { page, totalPages, totalItems, pageItems } = paginateItems(
+		historyEntries,
+		historyPage,
+	);
+	historyPage = page;
+	updatePaginationControls({
+		container: historyPagination,
+		prevButton: historyPrevButton,
+		nextButton: historyNextButton,
+		infoElement: historyPageInfo,
+		page,
+		totalPages,
+		totalItems,
+	});
 
 	historyList.textContent = "";
 
-	if (history.length === 0) {
+	if (pageItems.length === 0) {
 		renderListMessage(historyList, t("historyEmpty"));
 		return;
 	}
 
-	for (const item of history) {
+	for (const item of pageItems) {
 		const rawPath = item.finalPath || item.requestedPath || "";
 		const meta = [
 			item.format ? item.format.toUpperCase() : "",
@@ -265,18 +351,37 @@ async function renderActivity() {
 	if (revision !== activityRenderRevision) {
 		return;
 	}
-	const activity = Array.isArray(stored[RECENT_ACTIVITY_KEY])
+	activityEntries = Array.isArray(stored[RECENT_ACTIVITY_KEY])
 		? stored[RECENT_ACTIVITY_KEY]
 		: [];
+	activityTabCount.textContent = String(activityEntries.length);
+	renderActivityPage();
+}
+
+function renderActivityPage() {
+	const { page, totalPages, totalItems, pageItems } = paginateItems(
+		activityEntries,
+		activityPage,
+	);
+	activityPage = page;
+	updatePaginationControls({
+		container: activityPagination,
+		prevButton: activityPrevButton,
+		nextButton: activityNextButton,
+		infoElement: activityPageInfo,
+		page,
+		totalPages,
+		totalItems,
+	});
 
 	activityList.textContent = "";
 
-	if (activity.length === 0) {
+	if (pageItems.length === 0) {
 		renderListMessage(activityList, t("activityEmpty"));
 		return;
 	}
 
-	for (const item of activity) {
+	for (const item of pageItems) {
 		const listItem = document.createElement("li");
 		listItem.className = "list-item";
 		listItem.dataset.status = ["error", "warning"].includes(item.status)
@@ -300,6 +405,89 @@ async function renderActivity() {
 		listItem.append(headDiv, messageDiv);
 		activityList.append(listItem);
 	}
+}
+
+function setActiveRecordsTab(tabName, { focus = false } = {}) {
+	activeRecordsTab = tabName === "activity" ? "activity" : "history";
+	const isHistory = activeRecordsTab === "history";
+	historyTabButton.setAttribute("aria-selected", String(isHistory));
+	historyTabButton.tabIndex = isHistory ? 0 : -1;
+	activityTabButton.setAttribute("aria-selected", String(!isHistory));
+	activityTabButton.tabIndex = isHistory ? -1 : 0;
+	historyPanel.hidden = !isHistory;
+	activityPanel.hidden = isHistory;
+	if (focus) {
+		(isHistory ? historyTabButton : activityTabButton).focus?.();
+	}
+}
+
+function handleRecordsTabKeydown(event) {
+	if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+		event.preventDefault();
+		setActiveRecordsTab(
+			activeRecordsTab === "history" ? "activity" : "history",
+			{ focus: true },
+		);
+		return;
+	}
+
+	if (event.key === "Home") {
+		event.preventDefault();
+		setActiveRecordsTab("history", { focus: true });
+		return;
+	}
+
+	if (event.key === "End") {
+		event.preventDefault();
+		setActiveRecordsTab("activity", { focus: true });
+	}
+}
+
+function setHistoryPage(nextPage) {
+	historyPage = nextPage;
+	renderHistoryPage();
+	historyScroll.scrollTop = 0;
+}
+
+function setActivityPage(nextPage) {
+	activityPage = nextPage;
+	renderActivityPage();
+	activityScroll.scrollTop = 0;
+}
+
+function paginateItems(items, requestedPage) {
+	const totalItems = items.length;
+	const totalPages = Math.max(1, Math.ceil(totalItems / RECORDS_PAGE_SIZE));
+	const page = Math.min(Math.max(1, requestedPage), totalPages);
+	const startIndex = (page - 1) * RECORDS_PAGE_SIZE;
+	return {
+		page,
+		totalPages,
+		totalItems,
+		pageItems: items.slice(startIndex, startIndex + RECORDS_PAGE_SIZE),
+	};
+}
+
+function updatePaginationControls({
+	container,
+	prevButton,
+	nextButton,
+	infoElement,
+	page,
+	totalPages,
+	totalItems,
+}) {
+	const showPagination = totalPages > 1;
+	container.hidden = !showPagination;
+	prevButton.disabled = page <= 1;
+	nextButton.disabled = page >= totalPages;
+	infoElement.textContent = showPagination
+		? t("historyPaginationStatus", [
+				String(page),
+				String(totalPages),
+				String(totalItems),
+			])
+		: "";
 }
 
 function getPartialCaptureMeta(item) {
@@ -407,7 +595,15 @@ function localizeStaticContent() {
 	silentSaveLabel.textContent = t("toggleSilentSave");
 	panelHistoryTitle.textContent = t("panelHistoryTitle");
 	panelHistoryBody.textContent = t("panelHistoryBody");
-	activityTitle.textContent = t("panelActivityTitle");
+	recordsTablist.setAttribute("aria-label", t("historyTabsLabel"));
+	historyTabLabel.textContent = t("dialogHistoryTitle");
+	activityTabLabel.textContent = t("panelActivityTitle");
+	historyPagination.setAttribute("aria-label", t("historyPaginationLabel"));
+	activityPagination.setAttribute("aria-label", t("historyPaginationLabel"));
+	historyPrevButton.textContent = t("buttonPreviousPage");
+	historyNextButton.textContent = t("buttonNextPage");
+	activityPrevButton.textContent = t("buttonPreviousPage");
+	activityNextButton.textContent = t("buttonNextPage");
 	autoSaveHint.textContent = t("statusSettingsAutoSave");
 	resetButton.textContent = t("buttonResetSettings");
 	openHistoryButton.textContent = t("buttonOpenHistory");
@@ -543,7 +739,9 @@ async function clearHistory() {
 			throw new Error(response?.error || t("statusHistoryClearFailed"));
 		}
 
-		await renderHistory();
+		historyPage = 1;
+		activityPage = 1;
+		await Promise.all([renderHistory(), renderActivity()]);
 		setOperationStatus(t("statusHistoryCleared"), "success");
 		showToast(t("statusHistoryCleared"));
 	} catch (error) {
@@ -558,6 +756,10 @@ async function refreshHistory() {
 		await renderHistory();
 	} catch (error) {
 		const message = formatOperationError("statusHistoryLoadFailed", error);
+		historyEntries = [];
+		historyPage = 1;
+		historyTabCount.textContent = "0";
+		historyPagination.hidden = true;
 		renderListMessage(historyList, message, "error");
 		setOperationStatus(message, "error");
 	}
@@ -568,6 +770,10 @@ async function refreshActivity() {
 		await renderActivity();
 	} catch (error) {
 		const message = formatOperationError("statusHistoryLoadFailed", error);
+		activityEntries = [];
+		activityPage = 1;
+		activityTabCount.textContent = "0";
+		activityPagination.hidden = true;
 		renderListMessage(activityList, message, "error");
 		setOperationStatus(message, "error");
 	}

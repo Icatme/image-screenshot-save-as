@@ -90,13 +90,34 @@ test("history mutations stay ordered when clear races with appends", async () =>
   const { module, localArea } = await loadStorageState();
 
   const firstAppend = module.appendSaveHistory({ id: "before-clear" });
+  const firstActivity = module.appendActivity({ id: "activity-before-clear", message: "old" });
   const clear = module.clearSaveHistory();
   const secondAppend = module.appendSaveHistory({ id: "after-clear" });
-  await Promise.all([firstAppend, clear, secondAppend]);
+  const secondActivity = module.appendActivity({ id: "activity-after-clear", message: "new" });
+  await Promise.all([firstAppend, firstActivity, clear, secondAppend, secondActivity]);
 
   assert.deepEqual(localArea.values.saveHistory.map((entry) => entry.id), [
     "after-clear",
   ]);
+  assert.deepEqual(localArea.values.recentActivity.map((entry) => entry.id), [
+    "activity-after-clear",
+  ]);
+});
+
+test("clearSaveHistory removes both saveHistory and recentActivity", async () => {
+  const { module, localArea } = await loadStorageState({
+    local: {
+      saveHistory: [{ id: "h1" }],
+      recentActivity: [{ id: "a1", title: "Saved", message: "Done" }],
+      unrelated: "keep",
+    },
+  });
+
+  await module.clearSaveHistory();
+
+  assert.equal(localArea.values.saveHistory, undefined);
+  assert.equal(localArea.values.recentActivity, undefined);
+  assert.equal(localArea.values.unrelated, "keep");
 });
 
 test("history IDs are de-duplicated and the latest value wins", async () => {

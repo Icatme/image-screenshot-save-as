@@ -9,17 +9,30 @@ async function waitUntil(predicate) {
   }
 }
 
-async function withOptions(scenario) {
+async function withOptions(scenario, { local = {} } = {}) {
   const elements = new Map();
-  function element() {
-    return {
-      value: "", checked: false, dataset: {}, attributes: {}, listeners: {},
+  function element(tagName = "div") {
+    const node = {
+      tagName,
+      value: "", checked: false, disabled: false, hidden: false, open: false,
+      scrollTop: 0, tabIndex: 0, dataset: {}, attributes: {}, listeners: {},
+      children: [],
       childNodes: [{ textContent: "" }],
+      _textContent: "",
+      get textContent() { return this._textContent; },
+      set textContent(value) {
+        this._textContent = String(value);
+        if (value === "") this.children = [];
+      },
       addEventListener(type, callback) { this.listeners[type] = callback; },
       setAttribute(name, value) { this.attributes[name] = value; },
       querySelector() { return { textContent: "" }; },
-      append() {},
+      append(...items) { this.children.push(...items); },
+      showModal() { this.open = true; },
+      close() { this.open = false; },
+      focus() { this.focused = true; },
     };
+    return node;
   }
   const get = (id) => {
     if (!elements.has(id)) elements.set(id, element());
@@ -28,11 +41,15 @@ async function withOptions(scenario) {
   const timers = new Map();
   const blockers = [];
   const writes = [];
+  const sentMessages = [];
   let timerId = 0;
   let stored = { jpgQuality: 0.92, webpQuality: 0.92, silentSave: false, localeOverride: "auto" };
+  let localStored = structuredClone(local);
+  const storageListeners = [];
   const globals = {
     document: { getElementById: get, createElement: element, documentElement: {} },
     window: {
+      confirm: () => true,
       setTimeout(callback, delay) { timers.set(++timerId, { callback, delay }); return timerId; },
       clearTimeout(id) { timers.delete(id); },
     },
@@ -40,6 +57,14 @@ async function withOptions(scenario) {
       runtime: {
         getManifest: () => ({ version: "1.9.0", manifest_version: 3 }),
         getURL: () => "data:application/json,%7B%7D",
+        async sendMessage(message) {
+          sentMessages.push(message);
+          if (message?.type === "CLEAR_SAVE_HISTORY") {
+            delete localStored.saveHistory;
+            delete localStored.recentActivity;
+          }
+          return { ok: true };
+        },
       },
       i18n: { getUILanguage: () => "en" },
       storage: {
@@ -51,8 +76,17 @@ async function withOptions(scenario) {
             stored = { ...value };
           },
         },
-        local: { async get() { return {}; } },
-        onChanged: { addListener() {} },
+        local: {
+          async get(key) {
+            if (typeof key === "string") {
+              return key in localStored ? { [key]: structuredClone(localStored[key]) } : {};
+            }
+            return structuredClone(localStored);
+          },
+        },
+        onChanged: {
+          addListener(listener) { storageListeners.push(listener); },
+        },
       },
     },
   };
@@ -64,9 +98,18 @@ async function withOptions(scenario) {
     await import(`../src/options/options.js?test=${crypto.randomUUID()}`);
     await waitUntil(() => get("settings-form").attributes["aria-busy"] === "false");
     await scenario({
-      get, writes, timers,
+      get, writes, timers, sentMessages,
       get stored() { return stored; },
-      fire(id, type) { return get(id).listeners[type]({ preventDefault() {} }); },
+      get localStored() { return localStored; },
+      setLocal(next) {
+        localStored = structuredClone(next);
+        for (const listener of storageListeners) {
+          listener({ saveHistory: {}, recentActivity: {} }, "local");
+        }
+      },
+      fire(id, type, extra = {}) {
+        return get(id).listeners[type]({ preventDefault() {}, target: get(id), ...extra });
+      },
       blockNextSave() {
         let resolve, reject;
         blockers.push(new Promise((yes, no) => { resolve = yes; reject = no; }));
@@ -153,5 +196,87 @@ test("failed persistence is visible and does not discard the next edit", async (
     assert.match(state.get("operation-status").textContent, /Storage unavailable/);
     state.flushDebounce();
     await waitUntil(() => state.stored.jpgQuality === 0.7);
+  });
+});
+
+test("history dialog paginates both save history and recent activity and switches tabs", async () => {
+  const saveHistory = Array.from({ length: 7 }, (_, index) => ({
+    id: `h-${index + 1}`,
+    status: "completed",
+    action: "save",
+    format: "png",
+    finalPath: `C:\\Downloads\\item-${index + 1}.png`,
+    finishedAt: "2026-11-23T09:00:00.000Z",
+  }));
+  const recentActivity = Array.from({ length: 12 }, (_, index) => ({
+    id: `a-${index + 1}`,
+    title: `Activity ${index + 1}`,
+    message: `Detail ${index + 1}`,
+    status: "success",
+    createdAt: "2026-11-23T09:00:00.000Z",
+  }));
+
+  await withOptions(async (state) => {
+    assert.equal(state.get("tab-history").attributes["aria-selected"], "true");
+    assert.equal(state.get("tab-activity").attributes["aria-selected"], "false");
+    assert.equal(state.get("history-panel").hidden, false);
+    assert.equal(state.get("activity-panel").hidden, true);
+    assert.equal(state.get("tab-history-count").textContent, "7");
+    assert.equal(state.get("tab-activity-count").textContent, "12");
+
+    assert.equal(state.get("history-list").children.length, 5);
+    assert.equal(state.get("history-pagination").hidden, false);
+    assert.equal(state.get("history-prev-button").disabled, true);
+    assert.equal(state.get("history-next-button").disabled, false);
+
+    state.fire("history-next-button", "click");
+    assert.equal(state.get("history-list").children.length, 2);
+    assert.equal(state.get("history-prev-button").disabled, false);
+    assert.equal(state.get("history-next-button").disabled, true);
+
+    state.fire("tab-activity", "click");
+    assert.equal(state.get("tab-activity").attributes["aria-selected"], "true");
+    assert.equal(state.get("activity-panel").hidden, false);
+    assert.equal(state.get("history-panel").hidden, true);
+    assert.equal(state.get("activity-list").children.length, 5);
+    assert.equal(state.get("activity-pagination").hidden, false);
+    assert.equal(state.get("activity-prev-button").disabled, true);
+    assert.equal(state.get("activity-next-button").disabled, false);
+
+    state.fire("activity-next-button", "click");
+    assert.equal(state.get("activity-list").children.length, 5);
+    state.fire("activity-next-button", "click");
+    assert.equal(state.get("activity-list").children.length, 2);
+    assert.equal(state.get("activity-next-button").disabled, true);
+
+    state.setLocal({ saveHistory: saveHistory.slice(0, 3), recentActivity: recentActivity.slice(0, 4) });
+    await waitUntil(() => state.get("tab-activity-count").textContent === "4");
+    assert.equal(state.get("activity-list").children.length, 4);
+    assert.equal(state.get("activity-pagination").hidden, true);
+    assert.equal(state.get("history-list").children.length, 3);
+    assert.equal(state.get("history-pagination").hidden, true);
+  }, { local: { saveHistory, recentActivity } });
+});
+
+test("clearing history clears and re-renders both save history and recent activity", async () => {
+  await withOptions(async (state) => {
+    assert.equal(state.get("tab-history-count").textContent, "1");
+    assert.equal(state.get("tab-activity-count").textContent, "1");
+
+    state.fire("clear-history-button", "click");
+    await waitUntil(() => state.get("tab-activity-count").textContent === "0");
+
+    assert.deepEqual(state.sentMessages, [{ type: "CLEAR_SAVE_HISTORY" }]);
+    assert.equal(state.get("tab-history-count").textContent, "0");
+    assert.equal(state.get("tab-activity-count").textContent, "0");
+    assert.equal(state.get("history-pagination").hidden, true);
+    assert.equal(state.get("activity-pagination").hidden, true);
+    assert.equal(state.get("history-list").children[0].className, "empty");
+    assert.equal(state.get("activity-list").children[0].className, "empty");
+  }, {
+    local: {
+      saveHistory: [{ id: "h-1", status: "completed", format: "png", finalPath: "a.png" }],
+      recentActivity: [{ id: "a-1", title: "Saved", message: "Done", status: "success" }],
+    },
   });
 });

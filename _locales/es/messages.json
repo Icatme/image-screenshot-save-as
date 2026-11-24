@@ -391,7 +391,7 @@
     "message": "Historial de guardado"
   },
   "panelHistoryBody": {
-    "message": "El historial permanece en el almacenamiento local del navegador. Ábrelo cuando lo necesites o bórralo aquí."
+    "message": "El historial de guardado y la actividad reciente permanecen en el almacenamiento local del navegador. Ábrelos cuando los necesites o bórralos aquí."
   },
   "buttonOpenHistory": {
     "message": "Ver historial"
@@ -480,13 +480,39 @@
     "message": "No se pudo borrar el historial."
   },
   "confirmClearHistory": {
-    "message": "¿Borrar todo el historial guardado? Esta acción no se puede deshacer."
+    "message": "¿Borrar todo el historial de guardado y la actividad reciente? Esta acción no se puede deshacer."
   },
   "panelActivityTitle": {
     "message": "Actividad reciente"
   },
   "activityEmpty": {
     "message": "Todavía no hay actividad reciente."
+  },
+  "historyTabsLabel": {
+    "message": "Vistas de registros"
+  },
+  "historyPaginationLabel": {
+    "message": "Paginación de registros"
+  },
+  "buttonPreviousPage": {
+    "message": "Anterior"
+  },
+  "buttonNextPage": {
+    "message": "Siguiente"
+  },
+  "historyPaginationStatus": {
+    "message": "Página $PAGE$ / $TOTAL$ · $COUNT$ elementos",
+    "placeholders": {
+      "page": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      },
+      "count": {
+        "content": "$3"
+      }
+    }
   },
   "errorImageRequestTimedOut": {
     "message": "La solicitud de la imagen agotó el tiempo de espera."

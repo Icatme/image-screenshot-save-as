@@ -391,7 +391,7 @@
     "message": "保存历史"
   },
   "panelHistoryBody": {
-    "message": "历史记录保存在浏览器本地存储中，可按需查看或在这里清空。"
+    "message": "保存历史与最近活动存储在浏览器本地，可按需查看或在这里一并清空。"
   },
   "buttonOpenHistory": {
     "message": "查看历史记录"
@@ -480,13 +480,39 @@
     "message": "无法清空历史。"
   },
   "confirmClearHistory": {
-    "message": "确定清空全部保存历史吗？此操作无法撤销。"
+    "message": "确定清空全部保存历史和最近活动吗？此操作无法撤销。"
   },
   "panelActivityTitle": {
     "message": "最近活动"
   },
   "activityEmpty": {
     "message": "暂无最近活动。"
+  },
+  "historyTabsLabel": {
+    "message": "记录分类"
+  },
+  "historyPaginationLabel": {
+    "message": "记录分页"
+  },
+  "buttonPreviousPage": {
+    "message": "上一页"
+  },
+  "buttonNextPage": {
+    "message": "下一页"
+  },
+  "historyPaginationStatus": {
+    "message": "第 $PAGE$ / $TOTAL$ 页 · 共 $COUNT$ 条",
+    "placeholders": {
+      "page": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      },
+      "count": {
+        "content": "$3"
+      }
+    }
   },
   "errorImageRequestTimedOut": {
     "message": "请求图片超时。"

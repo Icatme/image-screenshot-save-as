@@ -391,7 +391,7 @@
     "message": "Speicherverlauf"
   },
   "panelHistoryBody": {
-    "message": "Der Verlauf bleibt im lokalen Browserspeicher. Bei Bedarf kann er hier geöffnet oder gelöscht werden."
+    "message": "Speicherverlauf und letzte Aktivitäten bleiben im lokalen Browserspeicher. Sie können hier bei Bedarf geöffnet oder gemeinsam gelöscht werden."
   },
   "buttonOpenHistory": {
     "message": "Verlauf anzeigen"
@@ -480,13 +480,39 @@
     "message": "Der Verlauf konnte nicht gelöscht werden."
   },
   "confirmClearHistory": {
-    "message": "Gesamten Speicherverlauf löschen? Dies kann nicht rückgängig gemacht werden."
+    "message": "Gesamten Speicherverlauf und alle letzten Aktivitäten löschen? Dies kann nicht rückgängig gemacht werden."
   },
   "panelActivityTitle": {
     "message": "Letzte Aktivitäten"
   },
   "activityEmpty": {
     "message": "Noch keine Aktivitäten."
+  },
+  "historyTabsLabel": {
+    "message": "Eintragsansichten"
+  },
+  "historyPaginationLabel": {
+    "message": "Eintragsseiten"
+  },
+  "buttonPreviousPage": {
+    "message": "Zurück"
+  },
+  "buttonNextPage": {
+    "message": "Weiter"
+  },
+  "historyPaginationStatus": {
+    "message": "Seite $PAGE$ / $TOTAL$ · $COUNT$ Einträge",
+    "placeholders": {
+      "page": {
+        "content": "$1"
+      },
+      "total": {
+        "content": "$2"
+      },
+      "count": {
+        "content": "$3"
+      }
+    }
   },
   "errorImageRequestTimedOut": {
     "message": "Zeitüberschreitung bei der Bildanfrage."

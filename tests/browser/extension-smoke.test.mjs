@@ -264,15 +264,13 @@ test(
               finishedAt: new Date().toISOString(),
             },
           ],
-          recentActivity: [
-            {
-              id: "partial-ui-smoke",
-              title: "部分长截图已保存",
-              message: "已保存捕获到的内容。",
-              status: "warning",
-              createdAt: new Date().toISOString(),
-            },
-          ],
+          recentActivity: Array.from({ length: 7 }, (_, index) => ({
+            id: index === 0 ? "partial-ui-smoke" : `activity-smoke-${index}`,
+            title: index === 0 ? "部分长截图已保存" : `活动 ${index + 1}`,
+            message: index === 0 ? "已保存捕获到的内容。" : `详情 ${index + 1}`,
+            status: index === 0 ? "warning" : "success",
+            createdAt: new Date().toISOString(),
+          })),
         });
       });
       await page.waitForFunction(() => {
@@ -284,17 +282,50 @@ test(
         );
       });
       const partialFeedbackCheck = await page.evaluate(() => ({
+        activityInsideDialog: Boolean(
+          document.querySelector("#history-dialog #activity-list"),
+        ),
+        activityOutsideDialog: Boolean(
+          document.querySelector("main #activity-list"),
+        ),
         historyStatus:
           document.querySelector("#history-list .list-item")?.dataset.status,
         historyMeta:
           document.querySelector("#history-list .list-meta")?.textContent,
         activityStatus:
           document.querySelector("#activity-list .list-item")?.dataset.status,
+        activityPageOneCount:
+          document.querySelectorAll("#activity-list .list-item").length,
       }));
+      assert.equal(partialFeedbackCheck.activityInsideDialog, true);
+      assert.equal(partialFeedbackCheck.activityOutsideDialog, false);
       assert.equal(partialFeedbackCheck.historyStatus, "warning");
       assert.equal(partialFeedbackCheck.activityStatus, "warning");
+      assert.equal(partialFeedbackCheck.activityPageOneCount, 5);
       assert.match(partialFeedbackCheck.historyMeta, /页面无法继续滚动/);
       assert.match(partialFeedbackCheck.historyMeta, /100 \/ 120/);
+
+      await page.click("#open-history-button");
+      await page.waitForFunction(() => document.querySelector("#history-dialog")?.open === true);
+      await page.click("#tab-activity");
+      await page.waitForFunction(() => document.querySelector("#activity-panel")?.hidden === false);
+      await page.click("#activity-next-button");
+      const activityPageTwoCount = await page.evaluate(
+        () => document.querySelectorAll("#activity-list .list-item").length,
+      );
+      assert.equal(activityPageTwoCount, 2);
+      await page.click("#close-history-button");
+
+      const clearAllResponse = await page.evaluate(() =>
+        chrome.runtime.sendMessage({ type: "CLEAR_SAVE_HISTORY" }),
+      );
+      assert.deepEqual(clearAllResponse, { ok: true });
+      await page.waitForFunction(() => {
+        return (
+          document.querySelector("#tab-history-count")?.textContent === "0" &&
+          document.querySelector("#tab-activity-count")?.textContent === "0"
+        );
+      });
 
       const recoveryCheck = await page.evaluate(async () => {
         const { preparePageForScreenshot, restorePageAfterScreenshot } =
