@@ -916,6 +916,26 @@
 
           <section class="panel">
             <div class="panel-copy">
+              <h2 id="panel-screenshot-title">网页截图</h2>
+              <p id="panel-screenshot-body">设置页面右键菜单第一层直接使用的截图格式；其他格式保留在“其他格式”子菜单中。</p>
+            </div>
+
+            <div class="field-grid">
+              <div class="field">
+                <label for="default-screenshot-format" id="default-screenshot-format-label">默认截图格式</label>
+                <div class="select-wrap">
+                  <select id="default-screenshot-format" name="defaultScreenshotFormat">
+                    <option value="png">PNG</option>
+                    <option value="jpg">JPG</option>
+                    <option value="webp">WebP</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-copy">
               <h2 id="panel-quality-title">导出质量</h2>
               <p id="panel-quality-body">PNG 始终无损。JPG 和 WebP 使用下面的质量值，范围 0.10 到 1.00。</p>
             </div>
@@ -940,10 +960,15 @@
           <section class="panel">
             <div class="panel-copy">
               <h2 id="panel-save-mode-title">保存方式</h2>
-              <p id="panel-save-mode-body">开启后使用静默保存。默认保存到浏览器的 Downloads 目录。</p>
+              <p id="panel-save-mode-body">控制保存后是否自动复制最终本地文件路径（与右键菜单勾选状态同步），以及是否静默保存到浏览器默认的 Downloads 目录。</p>
             </div>
 
             <div class="field-grid">
+              <label class="toggle" for="copy-path-after-save">
+                <input id="copy-path-after-save" name="copyPathAfterSave" type="checkbox" checked>
+                <span id="copy-path-after-save-label">保存后复制文件路径</span>
+              </label>
+
               <label class="toggle" for="silent-save">
                 <input id="silent-save" name="silentSave" type="checkbox">
                 <span id="silent-save-label">开启静默保存</span>

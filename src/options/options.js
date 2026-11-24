@@ -15,6 +15,7 @@ let translate = (messageName) => messageName;
 let autoSaveTimeoutId = null;
 let toastTimeoutId = null;
 let settingsMutationQueue = Promise.resolve();
+let activeSettingsMutations = 0;
 let settingsRevision = 0;
 let historyRenderRevision = 0;
 let activityRenderRevision = 0;
@@ -43,8 +44,20 @@ const panelLanguageTitle = document.getElementById("panel-language-title");
 const panelLanguageBody = document.getElementById("panel-language-body");
 const localeOverrideLabel = document.getElementById("locale-override-label");
 const localeOverrideSelect = document.getElementById("locale-override");
+const panelScreenshotTitle = document.getElementById("panel-screenshot-title");
+const panelScreenshotBody = document.getElementById("panel-screenshot-body");
+const defaultScreenshotFormatLabel = document.getElementById(
+	"default-screenshot-format-label",
+);
+const defaultScreenshotFormatSelect = document.getElementById(
+	"default-screenshot-format",
+);
 const jpgQualityInput = document.getElementById("jpg-quality");
 const webpQualityInput = document.getElementById("webp-quality");
+const copyPathAfterSaveInput = document.getElementById("copy-path-after-save");
+const copyPathAfterSaveLabel = document.getElementById(
+	"copy-path-after-save-label",
+);
 const silentSaveInput = document.getElementById("silent-save");
 const optionsHeading = document.getElementById("options-heading");
 const optionsIntro = document.getElementById("options-intro");
@@ -156,6 +169,14 @@ function bindEventListeners() {
 		void persistSettings({ refreshRecords: true });
 	});
 
+	defaultScreenshotFormatSelect.addEventListener("change", () => {
+		void persistSettings({ refreshRecords: false });
+	});
+
+	copyPathAfterSaveInput.addEventListener("change", () => {
+		void persistSettings({ refreshRecords: false });
+	});
+
 	silentSaveInput.addEventListener("change", () => {
 		void persistSettings({ refreshRecords: false });
 	});
@@ -222,6 +243,11 @@ function bindEventListeners() {
 	});
 
 	chrome.storage.onChanged.addListener((changes, areaName) => {
+		if (areaName === "sync") {
+			void syncExternalSettings(changes);
+			return;
+		}
+
 		if (areaName !== "local") {
 			return;
 		}
@@ -236,10 +262,45 @@ function bindEventListeners() {
 	});
 }
 
+async function syncExternalSettings(changes) {
+	if (autoSaveTimeoutId !== null || activeSettingsMutations > 0) {
+		return;
+	}
+	const revision = settingsRevision;
+	try {
+		const latest = await getSettings();
+		if (
+			revision !== settingsRevision ||
+			autoSaveTimeoutId !== null ||
+			activeSettingsMutations > 0
+		) {
+			return;
+		}
+		if (changes.localeOverride) {
+			await setLocale(latest.localeOverride, revision);
+			if (
+				revision !== settingsRevision ||
+				autoSaveTimeoutId !== null ||
+				activeSettingsMutations > 0
+			) {
+				return;
+			}
+			applySettings(latest);
+			await Promise.all([refreshHistory(), refreshActivity()]);
+			return;
+		}
+		applySettings(latest);
+	} catch (error) {
+		showOperationErrors([["statusSettingsLoadFailed", error]]);
+	}
+}
+
 function applySettings(settings) {
 	localeOverrideSelect.value = settings.localeOverride;
+	defaultScreenshotFormatSelect.value = settings.defaultScreenshotFormat;
 	jpgQualityInput.value = String(settings.jpgQuality);
 	webpQualityInput.value = String(settings.webpQuality);
+	copyPathAfterSaveInput.checked = settings.copyPathAfterSave;
 	silentSaveInput.checked = settings.silentSave;
 	updateQualityLabel(jpgQualityLabel, "labelJpgQuality", settings.jpgQuality);
 	updateQualityLabel(
@@ -588,10 +649,14 @@ function localizeStaticContent() {
 	setLocaleOptionText("zh_TW", t("languageOptionZhTw"));
 	setLocaleOptionText("es", t("languageOptionSpanish"));
 	setLocaleOptionText("de", t("languageOptionGerman"));
+	panelScreenshotTitle.textContent = t("panelScreenshotTitle");
+	panelScreenshotBody.textContent = t("panelScreenshotBody");
+	defaultScreenshotFormatLabel.textContent = t("labelDefaultScreenshotFormat");
 	panelQualityTitle.textContent = t("panelQualityTitle");
 	panelQualityBody.textContent = t("panelQualityBody");
 	panelSaveModeTitle.textContent = t("panelSaveModeTitle");
 	panelSaveModeBody.textContent = t("panelSaveModeBody");
+	copyPathAfterSaveLabel.textContent = t("toggleCopyPathAfterSave");
 	silentSaveLabel.textContent = t("toggleSilentSave");
 	panelHistoryTitle.textContent = t("panelHistoryTitle");
 	panelHistoryBody.textContent = t("panelHistoryBody");
@@ -651,6 +716,7 @@ function scheduleAutoSave() {
 	const revision = ++settingsRevision;
 	const requestedSettings = readSettingsForm();
 	autoSaveTimeoutId = window.setTimeout(() => {
+		autoSaveTimeoutId = null;
 		void queueSettingsMutation(() => persistSettingsNow({
 			refreshRecords: false, requestedSettings, revision,
 		}));
@@ -660,14 +726,17 @@ function scheduleAutoSave() {
 function readSettingsForm() {
 	return {
 		localeOverride: localeOverrideSelect.value,
+		defaultScreenshotFormat: defaultScreenshotFormatSelect.value,
 		jpgQuality: jpgQualityInput.value,
 		webpQuality: webpQualityInput.value,
+		copyPathAfterSave: copyPathAfterSaveInput.checked,
 		silentSave: silentSaveInput.checked,
 	};
 }
 
 function persistSettings(options) {
 	window.clearTimeout(autoSaveTimeoutId);
+	autoSaveTimeoutId = null;
 	const revision = ++settingsRevision;
 	const requestedSettings = readSettingsForm();
 	return queueSettingsMutation(() =>
@@ -676,6 +745,7 @@ function persistSettings(options) {
 }
 
 async function persistSettingsNow({ refreshRecords, requestedSettings, revision }) {
+	activeSettingsMutations += 1;
 	try {
 		const saved = await saveSettings(requestedSettings);
 		if (revision !== settingsRevision) return;
@@ -690,11 +760,14 @@ async function persistSettingsNow({ refreshRecords, requestedSettings, revision 
 		}
 	} catch (error) {
 		showOperationErrors([["statusSettingsSaveFailed", error]]);
+	} finally {
+		activeSettingsMutations -= 1;
 	}
 }
 
 function restoreDefaults() {
 	window.clearTimeout(autoSaveTimeoutId);
+	autoSaveTimeoutId = null;
 	const revision = ++settingsRevision;
 	applySettings(DEFAULT_SETTINGS);
 	resetButton.disabled = true;
@@ -702,6 +775,7 @@ function restoreDefaults() {
 }
 
 async function restoreDefaultsNow(revision) {
+	activeSettingsMutations += 1;
 	try {
 		const saved = await saveSettings(DEFAULT_SETTINGS);
 		if (revision !== settingsRevision) return;
@@ -714,6 +788,7 @@ async function restoreDefaultsNow(revision) {
 	} catch (error) {
 		showOperationErrors([["statusSettingsSaveFailed", error]]);
 	} finally {
+		activeSettingsMutations -= 1;
 		resetButton.disabled = false;
 	}
 }

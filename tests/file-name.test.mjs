@@ -39,6 +39,25 @@ test("buildDownloadPath avoids Windows reserved names", () => {
   );
 });
 
+test("buildDownloadPath preserves safe original image extensions such as gif", () => {
+  assert.equal(
+    buildDownloadPath({
+      srcUrl: "https://example.test/memes/cat-dance.gif?v=2",
+      pageTitle: "ignored",
+      format: "gif",
+    }),
+    "cat-dance.gif",
+  );
+  assert.equal(
+    buildDownloadPath({
+      srcUrl: "https://example.test/icons/logo.svg",
+      pageTitle: "ignored",
+      format: "svg",
+    }),
+    "logo.svg",
+  );
+});
+
 test("buildDownloadPath falls back to a safe default and format", () => {
   assert.equal(
     buildDownloadPath({

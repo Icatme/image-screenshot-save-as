@@ -10,7 +10,10 @@ import {
 } from "../lib/file-name.js";
 import { createScreenshotDirectorySink, loadScreenshotDirectory } from "../lib/screenshot-directory.js";
 import { getTranslator } from "../lib/i18n.js";
-import { convertImageBlob } from "../lib/image-convert.js";
+import {
+	convertImageBlob,
+	prepareOriginalImageBlob,
+} from "../lib/image-convert.js";
 import {
 	IMAGE_ERROR_CODES,
 	getCanvasContextOptions,
@@ -23,7 +26,7 @@ import {
 	readDataUrlBlob,
 } from "../lib/image-source.js";
 import { isExtensionGalleryUrl } from "../lib/page-access.js";
-import { getSettings } from "../lib/settings.js";
+import { getSettings, saveSettings } from "../lib/settings.js";
 import {
 	captureScreenshotFrames,
 	ScreenshotPaginationRequired,
@@ -62,7 +65,13 @@ import {
 } from "../lib/storage-state.js";
 
 const ROOT_MENU_ID = "img-save-as";
+const IMAGE_ORIGINAL_MENU_ID = "image:original";
 const SCREENSHOT_MENU_ID = "page-screenshot-as";
+const SCREENSHOT_OTHER_FORMATS_MENU_ID = "screenshot-other-formats";
+const IMAGE_COPY_PATH_SEPARATOR_ID = "image:copy-path-separator";
+const SCREENSHOT_COPY_PATH_SEPARATOR_ID = "screenshot:copy-path-separator";
+const COPY_PATH_IMAGE_MENU_ID = "toggle:copy-path:image";
+const COPY_PATH_PAGE_MENU_ID = "toggle:copy-path:page";
 const PAGINATION_REQUEST_KEY = "screenshotPaginationRequest";
 const PAGINATION_PAGE = "src/pagination/pagination.html";
 // Throttle between captureVisibleTab calls to avoid overwhelming the API and allow
@@ -101,11 +110,6 @@ const FORMATS = [
 	{ id: "webp", title: "WebP" },
 ];
 
-const ACTIONS = [
-	{ id: "save", titleKey: "menuActionSave" },
-	{ id: "copy-path", titleKey: "menuActionCopyPath" },
-];
-
 const SCREENSHOT_MODES = [
 	{ id: "visible", titleKey: "menuScreenshotVisible" },
 	{ id: "region", titleKey: "menuScreenshotRegion" },
@@ -129,9 +133,22 @@ chrome.downloads.onChanged.addListener((downloadDelta) => {
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-	if (areaName === "sync" && changes.localeOverride) {
+	if (areaName !== "sync") {
+		return;
+	}
+
+	if (changes.localeOverride || changes.defaultScreenshotFormat) {
 		void ensureRuntimeReady()
 			.then(createContextMenus)
+			.catch(reportBackgroundError);
+		return;
+	}
+
+	if (changes.copyPathAfterSave) {
+		void ensureRuntimeReady()
+			.then(() =>
+				syncCopyPathContextMenus(Boolean(changes.copyPathAfterSave.newValue)),
+			)
 			.catch(reportBackgroundError);
 	}
 });
@@ -227,7 +244,8 @@ function createContextMenus() {
 }
 
 async function rebuildContextMenus() {
-	await refreshTranslations();
+	const settings = await getSettings();
+	await refreshTranslations(settings);
 	await chrome.contextMenus.removeAll();
 
 	chrome.contextMenus.create({
@@ -237,23 +255,36 @@ async function rebuildContextMenus() {
 	});
 
 	for (const format of FORMATS) {
-		const formatMenuId = `format:${format.id}`;
 		chrome.contextMenus.create({
-			id: formatMenuId,
+			id: buildImageMenuId(format.id),
 			parentId: ROOT_MENU_ID,
 			title: format.title,
 			contexts: ["image"],
 		});
-
-		for (const action of ACTIONS) {
-			chrome.contextMenus.create({
-				id: buildActionMenuId(format.id, action.id),
-				parentId: formatMenuId,
-				title: t(action.titleKey),
-				contexts: ["image"],
-			});
-		}
 	}
+
+	chrome.contextMenus.create({
+		id: IMAGE_ORIGINAL_MENU_ID,
+		parentId: ROOT_MENU_ID,
+		title: t("menuImageOriginal"),
+		contexts: ["image"],
+	});
+
+	chrome.contextMenus.create({
+		id: IMAGE_COPY_PATH_SEPARATOR_ID,
+		parentId: ROOT_MENU_ID,
+		type: "separator",
+		contexts: ["image"],
+	});
+
+	chrome.contextMenus.create({
+		id: COPY_PATH_IMAGE_MENU_ID,
+		parentId: ROOT_MENU_ID,
+		type: "checkbox",
+		title: t("menuCopyPathAfterSave"),
+		checked: settings.copyPathAfterSave,
+		contexts: ["image"],
+	});
 
 	chrome.contextMenus.create({
 		id: SCREENSHOT_MENU_ID,
@@ -261,34 +292,89 @@ async function rebuildContextMenus() {
 		contexts: ["page"],
 	});
 
+	const defaultFormat =
+		FORMATS.find((format) => format.id === settings.defaultScreenshotFormat) ||
+		FORMATS[0];
+	const otherFormats = FORMATS.filter(
+		(format) => format.id !== defaultFormat.id,
+	);
+
 	for (const mode of SCREENSHOT_MODES) {
-		const modeMenuId = `screenshot-mode:${mode.id}`;
 		chrome.contextMenus.create({
-			id: modeMenuId,
+			id: buildScreenshotMenuId(mode.id, defaultFormat.id),
 			parentId: SCREENSHOT_MENU_ID,
-			title: t(mode.titleKey),
+			title: t("menuScreenshotModeWithFormat", [
+				t(mode.titleKey),
+				defaultFormat.title,
+			]),
+			contexts: ["page"],
+		});
+	}
+
+	chrome.contextMenus.create({
+		id: SCREENSHOT_OTHER_FORMATS_MENU_ID,
+		parentId: SCREENSHOT_MENU_ID,
+		title: t("menuScreenshotOtherFormats"),
+		contexts: ["page"],
+	});
+
+	for (const format of otherFormats) {
+		const formatMenuId = `screenshot-other-format:${format.id}`;
+		chrome.contextMenus.create({
+			id: formatMenuId,
+			parentId: SCREENSHOT_OTHER_FORMATS_MENU_ID,
+			title: format.title,
 			contexts: ["page"],
 		});
 
-		for (const format of FORMATS) {
-			const formatMenuId = `screenshot-format:${mode.id}:${format.id}`;
+		for (const mode of SCREENSHOT_MODES) {
 			chrome.contextMenus.create({
-				id: formatMenuId,
-				parentId: modeMenuId,
-				title: format.title,
+				id: buildScreenshotMenuId(mode.id, format.id),
+				parentId: formatMenuId,
+				title: t(mode.titleKey),
 				contexts: ["page"],
 			});
-
-			for (const action of ACTIONS) {
-				chrome.contextMenus.create({
-					id: buildScreenshotActionMenuId(mode.id, format.id, action.id),
-					parentId: formatMenuId,
-					title: t(action.titleKey),
-					contexts: ["page"],
-				});
-			}
 		}
 	}
+
+	chrome.contextMenus.create({
+		id: SCREENSHOT_COPY_PATH_SEPARATOR_ID,
+		parentId: SCREENSHOT_MENU_ID,
+		type: "separator",
+		contexts: ["page"],
+	});
+
+	chrome.contextMenus.create({
+		id: COPY_PATH_PAGE_MENU_ID,
+		parentId: SCREENSHOT_MENU_ID,
+		type: "checkbox",
+		title: t("menuCopyPathAfterSave"),
+		checked: settings.copyPathAfterSave,
+		contexts: ["page"],
+	});
+}
+
+function syncCopyPathContextMenus(checked) {
+	const operation = contextMenuUpdateQueue
+		.catch(() => {})
+		.then(async () => {
+			if (typeof chrome.contextMenus?.update !== "function") {
+				return;
+			}
+			const results = await Promise.allSettled([
+				chrome.contextMenus.update(COPY_PATH_IMAGE_MENU_ID, { checked }),
+				chrome.contextMenus.update(COPY_PATH_PAGE_MENU_ID, { checked }),
+			]);
+			if (
+				results.some((result) => result.status === "rejected") &&
+				typeof chrome.contextMenus?.removeAll === "function" &&
+				typeof chrome.contextMenus?.create === "function"
+			) {
+				await rebuildContextMenus();
+			}
+		});
+	contextMenuUpdateQueue = operation;
+	return operation;
 }
 
 async function handleMenuClick(info, tab) {
@@ -299,12 +385,30 @@ async function handleMenuClick(info, tab) {
 		return;
 	}
 
+	if (command.kind === "toggle-copy-path") {
+		await handleCopyPathToggle(info);
+		return;
+	}
+
 	if (command.kind === "screenshot") {
 		await handleScreenshotMenuClick(command, info, tab);
 		return;
 	}
 
 	await handleImageMenuClick(command, info, tab);
+}
+
+async function handleCopyPathToggle(info) {
+	const settings = await getSettings();
+	const nextChecked =
+		typeof info.checked === "boolean"
+			? info.checked
+			: !settings.copyPathAfterSave;
+	const saved = await saveSettings({
+		...settings,
+		copyPathAfterSave: nextChecked,
+	});
+	await syncCopyPathContextMenus(saved.copyPathAfterSave);
 }
 
 async function handleImageMenuClick(command, info, tab) {
@@ -321,6 +425,7 @@ async function handleImageMenuClick(command, info, tab) {
 	try {
 		const settings = await getSettings();
 		await refreshTranslations(settings);
+		const action = settings.copyPathAfterSave ? "copy-path" : "save";
 		const sourceBlob = await getSourceImageBlob(
 			info.srcUrl,
 			tab?.id,
@@ -328,18 +433,20 @@ async function handleImageMenuClick(command, info, tab) {
 			pageUrl,
 			t,
 		);
-		const converted = await convertImageBlob(
-			sourceBlob,
-			command.format,
-			settings,
-		);
+		const output =
+			command.format === "original"
+				? await prepareOriginalImageBlob(sourceBlob, info.srcUrl)
+				: {
+						...(await convertImageBlob(sourceBlob, command.format, settings)),
+						format: command.format,
+					};
 		const downloadPath = buildDownloadPath({
 			srcUrl: info.srcUrl,
 			pageTitle: tab?.title ?? "",
-			format: command.format,
+			format: output.format,
 		});
 		const downloadResult = await downloadBlob(
-			converted.blob,
+			output.blob,
 			downloadPath,
 			settings.silentSave,
 		);
@@ -347,8 +454,8 @@ async function handleImageMenuClick(command, info, tab) {
 
 		await queuePendingDownload(downloadId, {
 			historyId: crypto.randomUUID(),
-			action: command.action,
-			format: command.format,
+			action,
+			format: output.format,
 			requestedPath: downloadPath,
 			objectUrl: downloadResult.objectUrl,
 			createdAt: new Date().toISOString(),
@@ -410,9 +517,11 @@ async function handleScreenshotMenuClick(command, info, tab) {
 		await restoreScreenshotLease(leaseResult.previousLease);
 	}
 
+	let action = "save";
 	try {
 		const settings = await getSettings();
 		await refreshTranslations(settings);
+		action = settings.copyPathAfterSave ? "copy-path" : "save";
 		let sourceBlob;
 		let partialCapture = false;
 		let partialReason = "";
@@ -462,7 +571,7 @@ async function handleScreenshotMenuClick(command, info, tab) {
 
 		await queuePendingDownload(downloadId, {
 			historyId: crypto.randomUUID(),
-			action: command.action,
+			action,
 			captureType: "screenshot",
 			screenshotMode: command.mode,
 			partialCapture,
@@ -479,7 +588,7 @@ async function handleScreenshotMenuClick(command, info, tab) {
 	} catch (error) {
 		if (error instanceof ScreenshotPaginationRequired) {
 			await releaseScreenshotLease(WORKER_INSTANCE_ID);
-			await openScreenshotPagination(tab, command, error);
+			await openScreenshotPagination(tab, { ...command, action }, error);
 		} else {
 			await notify(t("notifySaveFailedTitle"), getErrorMessage(error), "error");
 		}
@@ -668,12 +777,12 @@ async function recoverInterruptedPagination() {
 	}
 }
 
-function buildActionMenuId(format, action) {
-	return `action:${format}:${action}`;
+function buildImageMenuId(format) {
+	return `image:${format}`;
 }
 
-function buildScreenshotActionMenuId(mode, format, action) {
-	return `screenshot:${mode}:${format}:${action}`;
+function buildScreenshotMenuId(mode, format) {
+	return `screenshot:${mode}:${format}`;
 }
 
 function parseMenuId(menuItemId) {
@@ -681,30 +790,44 @@ function parseMenuId(menuItemId) {
 		return null;
 	}
 
+	if (
+		menuItemId === COPY_PATH_IMAGE_MENU_ID ||
+		menuItemId === COPY_PATH_PAGE_MENU_ID
+	) {
+		return {
+			kind: "toggle-copy-path",
+		};
+	}
+
+	if (menuItemId === IMAGE_ORIGINAL_MENU_ID) {
+		return {
+			kind: "image",
+			format: "original",
+		};
+	}
+
 	const parts = menuItemId.split(":");
-	if (parts.length === 3 && parts[0] === "action") {
-		if (!FORMATS.some(({ id }) => id === parts[1])
-			|| !ACTIONS.some(({ id }) => id === parts[2])) {
+	if (parts.length === 2 && parts[0] === "image") {
+		if (!FORMATS.some(({ id }) => id === parts[1])) {
 			return null;
 		}
 		return {
 			kind: "image",
 			format: parts[1],
-			action: parts[2],
 		};
 	}
 
-	if (parts.length === 4 && parts[0] === "screenshot") {
-		if (!SCREENSHOT_MODES.some(({ id }) => id === parts[1])
-			|| !FORMATS.some(({ id }) => id === parts[2])
-			|| !ACTIONS.some(({ id }) => id === parts[3])) {
+	if (parts.length === 3 && parts[0] === "screenshot") {
+		if (
+			!SCREENSHOT_MODES.some(({ id }) => id === parts[1]) ||
+			!FORMATS.some(({ id }) => id === parts[2])
+		) {
 			return null;
 		}
 		return {
 			kind: "screenshot",
 			mode: parts[1],
 			format: parts[2],
-			action: parts[3],
 		};
 	}
 

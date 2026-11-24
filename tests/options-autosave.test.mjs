@@ -43,7 +43,14 @@ async function withOptions(scenario, { local = {} } = {}) {
   const writes = [];
   const sentMessages = [];
   let timerId = 0;
-  let stored = { jpgQuality: 0.92, webpQuality: 0.92, silentSave: false, localeOverride: "auto" };
+  let stored = {
+    jpgQuality: 0.92,
+    webpQuality: 0.92,
+    silentSave: false,
+    copyPathAfterSave: true,
+    defaultScreenshotFormat: "png",
+    localeOverride: "auto",
+  };
   let localStored = structuredClone(local);
   const storageListeners = [];
   const globals = {
@@ -105,6 +112,15 @@ async function withOptions(scenario, { local = {} } = {}) {
         localStored = structuredClone(next);
         for (const listener of storageListeners) {
           listener({ saveHistory: {}, recentActivity: {} }, "local");
+        }
+      },
+      setSyncExternal(next, changedKeys = Object.keys(next)) {
+        stored = { ...stored, ...next };
+        const changes = Object.fromEntries(
+          changedKeys.map((key) => [key, { newValue: stored[key] }]),
+        );
+        for (const listener of storageListeners) {
+          listener(changes, "sync");
         }
       },
       fire(id, type, extra = {}) {
@@ -278,5 +294,24 @@ test("clearing history clears and re-renders both save history and recent activi
       saveHistory: [{ id: "h-1", status: "completed", format: "png", finalPath: "a.png" }],
       recentActivity: [{ id: "a-1", title: "Saved", message: "Done", status: "success" }],
     },
+  });
+});
+
+test("default screenshot format and copy-path toggle persist and stay synced with external changes", async () => {
+  await withOptions(async (state) => {
+    assert.equal(state.get("default-screenshot-format").value, "png");
+    assert.equal(state.get("copy-path-after-save").checked, true);
+
+    state.get("default-screenshot-format").value = "jpg";
+    state.fire("default-screenshot-format", "change");
+    await waitUntil(() => state.stored.defaultScreenshotFormat === "jpg");
+
+    state.get("copy-path-after-save").checked = false;
+    state.fire("copy-path-after-save", "change");
+    await waitUntil(() => state.stored.copyPathAfterSave === false);
+
+    state.setSyncExternal({ copyPathAfterSave: true, defaultScreenshotFormat: "webp" });
+    await waitUntil(() => state.get("copy-path-after-save").checked === true);
+    assert.equal(state.get("default-screenshot-format").value, "webp");
   });
 });

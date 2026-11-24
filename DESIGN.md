@@ -6,11 +6,11 @@
 
 已实现：
 
-- 网页图片导出为 PNG、JPG 或 WebP
-- 当前可视区域截图和整页滚动截图
-- 图片和单张截图支持 `Save` 和 `Save & Copy Path`；分页截图支持 `Save`
+- 网页图片导出为 PNG、JPG 或 WebP，或原样保存原始图片（保留 GIF 等动图帧及 SVG 源文件）
+- 当前可视区域截图、区域选择截图和整页滚动截图
+- 图片和单张截图支持通过右键菜单/设置页开关控制是否“保存后复制文件路径”（默认开启）；分页截图仅保存图片
 - 整页截图支持单张、最长分页和 A4 比例分页；超限时由用户确认输出方式
-- JPG、WebP 质量配置，界面语言配置和静默保存配置
+- 默认截图格式、JPG/WebP 质量、界面语言、保存后复制路径和静默保存配置
 - 最近活动、保存历史和下载结果反馈
 
 不在当前范围内：
@@ -27,39 +27,41 @@
 ```text
 Image Save As
 ├─ PNG
-│  ├─ Save
-│  └─ Save & Copy Path
 ├─ JPG
-│  ├─ Save
-│  └─ Save & Copy Path
-└─ WebP
-   ├─ Save
-   └─ Save & Copy Path
+├─ WebP
+├─ Save original
+├─ ──────────
+└─ ✓ Copy file path after saving
 ```
 
-页面右键菜单：
+页面右键菜单（以默认截图格式 `PNG` 为例）：
 
 ```text
 Page Screenshot As
-├─ Visible Page
-│  └─ PNG / JPG / WebP
-│     └─ Save / Save & Copy Path
-├─ Select Area
-│  └─ PNG / JPG / WebP
-│     └─ Save / Save & Copy Path
-└─ Full Page
-   └─ PNG / JPG / WebP
-      └─ Save / Save & Copy Path
+├─ Visible Page (PNG)
+├─ Select Area (PNG)
+├─ Full Page (PNG)
+├─ Other formats
+│  ├─ JPG
+│  │  ├─ Visible Page
+│  │  ├─ Select Area
+│  │  └─ Full Page
+│  └─ WebP
+│     ├─ Visible Page
+│     ├─ Select Area
+│     └─ Full Page
+├─ ──────────
+└─ ✓ Copy file path after saving
 ```
 
-菜单随界面语言生成。能保存单张时直接进入原保存流程；超限时在独立选项页选择最长分页、A4 分页或取消，不在菜单重复列出这些选项，也不预选分页方式。点击工具栏扩展图标会打开设置页；扩展没有 popup。
+菜单随界面语言和默认截图格式动态生成，`Copy file path after saving` 勾选框在图片菜单、页面菜单和设置页三处保持同步（默认开启）。能保存单张时直接进入原保存流程；超限时在独立选项页选择最长分页、A4 分页或取消，不在菜单重复列出这些选项，也不预选分页方式。点击工具栏扩展图标会打开设置页；扩展没有 popup。
 
 ## 3. 保存契约
 
 - `silentSave=false` 是默认值。下载使用 `saveAs: true`，必须由用户在系统窗口中确认；用户取消后，本次下载结束，不会自动切换为静默保存。
 - `silentSave=true` 时下载使用 `saveAs: false`，保存到 Chrome 默认下载目录。
-- `Save` 只保存文件。
-- `Save & Copy Path` 等待下载完成，从 `DownloadItem.filename` 取得最终绝对路径，再通过 offscreen 文档写入文本剪贴板。
+- `copyPathAfterSave=false` 时只保存文件。
+- `copyPathAfterSave=true`（默认值）时等待下载完成，从 `DownloadItem.filename` 取得最终绝对路径，再通过 offscreen 文档写入文本剪贴板。
 - 分页输出使用经用户授权的 File System Access 文件夹句柄，首次选择后在 IndexedDB 中记住；不把 Chrome 下载返回的路径字符串当成目录写权限。每次分页仍需明确确认方式与目录，无超限自动分页或缩小。文件夹接口没有绝对路径，分页选项页明确提示仅保存图片、不复制路径，历史仅显示文件夹名与文件名。
 - 文件已经保存但路径复制失败时，保留文件并记录/显示复制错误，不回滚下载。
 - 已创建的下载若被取消或中断，会记录为 `interrupted`，并释放对应的临时 Blob URL；用户在系统窗口取消、Chrome 未返回 download ID 时只产生失败反馈，不伪造下载记录。
@@ -189,7 +191,7 @@ HTTP/HTTPS 图片由扩展后台读取。`data:`、`blob:`、`file:` 或后台�
 
 | 存储区 | 内容 | 上限/生命周期 |
 | --- | --- | --- |
-| `chrome.storage.sync` | 语言、JPG/WebP 质量、静默保存 | 由 Chrome 设置同步策略管理 |
+| `chrome.storage.sync` | 语言、默认截图格式、JPG/WebP 质量、保存后复制路径、静默保存 | 由 Chrome 设置同步策略管理 |
 | `chrome.storage.local` / `recentActivity` | 标题、消息、状态、时间 | 最近 12 条 |
 | `chrome.storage.local` / `saveHistory` | 动作、格式、结果、路径、错误、截图类型、部分原因/高度和时间 | 最近 200 条 |
 | `chrome.storage.session` | 每个下载的临时处理上下文、截图恢复状态 | 当前浏览器会话 |
@@ -216,7 +218,7 @@ HTTP/HTTPS 图片由扩展后台读取。`data:`、`blob:`、`file:` 或后台�
 
 ## 10. 已知边界
 
-- 动图只导出首帧；SVG 栅格化后输出
+- 转码导出为 PNG/JPG/WebP 时动图只导出首帧、SVG 栅格化后输出；`Save original` 透传原始字节并按文件头/MIME 识别扩展名，保留 GIF 动图等源文件
 - 某些站点策略可能阻止 `blob:` 或受保护图片读取
 - Chrome 应用商店禁止扩展脚本注入；后台直读失败时不再尝试注入，并对图片提取、区域选择和整页截图返回稳定的本地化错误
 - Chrome 下载 API 只能写入默认下载目录及其子目录，不能直接写入任意系统图库目录

@@ -236,7 +236,7 @@ async function withHandler(options, scenario) {
     : originalSetTimeout(callback, delay <= 550 ? 0 : delay, ...args);
   try {
     await import(`../src/background/service-worker.js?pagination=${crypto.randomUUID()}`);
-    const clickFullPage = () => listeners.menu({ menuItemId: "screenshot:full-page:png:save", pageUrl: state.tab.url }, { ...state.tab });
+    const clickFullPage = () => listeners.menu({ menuItemId: "screenshot:full-page:png", pageUrl: state.tab.url }, { ...state.tab });
     state.open = async () => {
       clickFullPage();
       await waitUntil(() => state.session.state[REQUEST_KEY]?.chooserTabId && !state.session.state.activeScreenshot);
@@ -254,7 +254,7 @@ async function withHandler(options, scenario) {
     });
     state.startup = async () => {
       listeners.startup();
-      await waitUntil(() => state.menus.some(({ id }) => id === "screenshot:full-page:webp:save"));
+      await waitUntil(() => state.menus.some(({ id }) => id === "toggle:copy-path:page"));
     };
     state.restart = async () => {
       await import(`../src/background/service-worker.js?pagination=${crypto.randomUUID()}`);
@@ -435,14 +435,28 @@ test("switching tabs or navigating during capture never writes pixels from the w
   }
 });
 
-test("full-page menu goes directly to image formats without duplicate layout choices", async () => {
+test("screenshot menu promotes the default format, nests other formats, and exposes copy-path checkbox", async () => {
   await withHandler({}, async (state) => {
     await state.startup();
-    const children = state.menus.filter(({ parentId }) => parentId === "screenshot-mode:full-page");
-    assert.deepEqual(children.map(({ id }) => id), ["png", "jpg", "webp"].map((format) => `screenshot-format:full-page:${format}`));
+    const topScreenshotChildren = state.menus.filter(({ parentId }) => parentId === "page-screenshot-as");
+    assert.deepEqual(
+      topScreenshotChildren.map(({ id }) => id),
+      [
+        "screenshot:visible:png",
+        "screenshot:region:png",
+        "screenshot:full-page:png",
+        "screenshot-other-formats",
+        "screenshot:copy-path-separator",
+        "toggle:copy-path:page",
+      ],
+    );
+    const otherFormatGroups = state.menus.filter(({ parentId }) => parentId === "screenshot-other-formats");
+    assert.deepEqual(otherFormatGroups.map(({ id }) => id), ["screenshot-other-format:jpg", "screenshot-other-format:webp"]);
     assert.ok(state.menus.every(({ id }) => !id.startsWith("screenshot-layout:") && !id.includes("full-page-a4") && !id.includes("full-page-longest")));
-    assert.equal(state.menus.filter(({ id }) => id.startsWith("screenshot:full-page:")).length, 6);
-    assert.ok(state.menus.some(({ id }) => id === "screenshot:full-page:png:copy-path"));
+    assert.equal(state.menus.filter(({ id }) => id.startsWith("screenshot:full-page:")).length, 3);
+    assert.equal(state.menus.find(({ id }) => id === "toggle:copy-path:page")?.checked, true);
+    const request = await state.open();
+    assert.equal(request.action, "copy-path");
   });
 });
 

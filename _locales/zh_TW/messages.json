@@ -124,14 +124,28 @@
   "menuRoot": {
     "message": "圖片另存為"
   },
-  "menuActionSave": {
-    "message": "保存"
+  "menuImageOriginal": {
+    "message": "儲存原圖"
   },
-  "menuActionCopyPath": {
-    "message": "保存 && 複製路徑"
+  "menuCopyPathAfterSave": {
+    "message": "儲存後複製檔案路徑"
   },
   "menuScreenshotRoot": {
     "message": "網頁截圖另存為"
+  },
+  "menuScreenshotModeWithFormat": {
+    "message": "$MODE$（$FORMAT$）",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      },
+      "format": {
+        "content": "$2"
+      }
+    }
+  },
+  "menuScreenshotOtherFormats": {
+    "message": "其他格式"
   },
   "menuScreenshotVisible": {
     "message": "可視區域"
@@ -366,6 +380,15 @@
   "languageOptionGerman": {
     "message": "Deutsch"
   },
+  "panelScreenshotTitle": {
+    "message": "網頁截圖"
+  },
+  "panelScreenshotBody": {
+    "message": "設定頁面右鍵選單第一層直接使用的截圖格式；其他格式保留在「其他格式」子選單中。"
+  },
+  "labelDefaultScreenshotFormat": {
+    "message": "預設截圖格式"
+  },
   "panelQualityTitle": {
     "message": "導出品質"
   },
@@ -382,7 +405,10 @@
     "message": "保存方式"
   },
   "panelSaveModeBody": {
-    "message": "開啟後使用靜默保存。預設保存到瀏覽器的 Downloads 目錄。"
+    "message": "控制儲存後是否自動複製最終本地檔案路徑（與右鍵選單勾選狀態同步），以及是否靜默儲存到瀏覽器預設的 Downloads 目錄。"
+  },
+  "toggleCopyPathAfterSave": {
+    "message": "儲存後複製檔案路徑"
   },
   "toggleSilentSave": {
     "message": "開啟靜默保存"

@@ -5,6 +5,7 @@ import {
   MAX_IMAGE_EDGE,
   MAX_SOURCE_IMAGE_BYTES,
   convertImageBlob,
+  prepareOriginalImageBlob,
 } from "../src/lib/image-convert.js";
 
 function installCanvasMocks() {
@@ -179,4 +180,47 @@ test("convertImageBlob rejects silent MIME fallback and releases canvas memory",
     (error) => error?.code === "IMAGE_ENCODE_FAILED",
   );
   assert.deepEqual([createdCanvas.width, createdCanvas.height], [0, 0]);
+});
+
+test("prepareOriginalImageBlob preserves raw GIF bytes without decoding via canvas", async () => {
+  let decodeCalled = false;
+  globalThis.createImageBitmap = async () => {
+    decodeCalled = true;
+  };
+  const gifBytes = new Uint8Array([
+    0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x00, 0x3b,
+  ]);
+  const sourceBlob = new Blob([gifBytes], { type: "application/octet-stream" });
+
+  const result = await prepareOriginalImageBlob(
+    sourceBlob,
+    "https://cdn.example.test/media/abc123",
+  );
+
+  assert.equal(decodeCalled, false);
+  assert.equal(result.format, "gif");
+  assert.equal(result.mimeType, "image/gif");
+  assert.equal(result.blob.type, "image/gif");
+  assert.deepEqual(new Uint8Array(await result.blob.arrayBuffer()), gifBytes);
+});
+
+test("prepareOriginalImageBlob detects SVG and rejects empty or non-image payloads", async () => {
+  const svgSource = new Blob(['<svg xmlns="http://www.w3.org/2000/svg"></svg>'], {
+    type: "",
+  });
+  const svgResult = await prepareOriginalImageBlob(svgSource);
+  assert.equal(svgResult.format, "svg");
+  assert.equal(svgResult.mimeType, "image/svg+xml");
+
+  await assert.rejects(
+    prepareOriginalImageBlob(new Blob([], { type: "image/gif" })),
+    (error) => error?.code === "IMAGE_EMPTY",
+  );
+  await assert.rejects(
+    prepareOriginalImageBlob(
+      new Blob(["<html><body>Login</body></html>"], { type: "text/html" }),
+      "https://example.test/anim.gif",
+    ),
+    (error) => error?.code === "IMAGE_DECODE_FAILED",
+  );
 });

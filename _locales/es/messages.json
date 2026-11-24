@@ -124,14 +124,28 @@
   "menuRoot": {
     "message": "Guardar imagen como"
   },
-  "menuActionSave": {
-    "message": "Guardar"
+  "menuImageOriginal": {
+    "message": "Guardar original"
   },
-  "menuActionCopyPath": {
-    "message": "Guardar && Copiar ruta"
+  "menuCopyPathAfterSave": {
+    "message": "Copiar ruta del archivo al guardar"
   },
   "menuScreenshotRoot": {
     "message": "Guardar captura de página como"
+  },
+  "menuScreenshotModeWithFormat": {
+    "message": "$MODE$ ($FORMAT$)",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      },
+      "format": {
+        "content": "$2"
+      }
+    }
+  },
+  "menuScreenshotOtherFormats": {
+    "message": "Otros formatos"
   },
   "menuScreenshotVisible": {
     "message": "Página visible"
@@ -366,6 +380,15 @@
   "languageOptionGerman": {
     "message": "Deutsch"
   },
+  "panelScreenshotTitle": {
+    "message": "Capturas de página"
+  },
+  "panelScreenshotBody": {
+    "message": "Elige el formato predeterminado que aparece directamente en el menú de captura de página. Los demás formatos siguen en Otros formatos."
+  },
+  "labelDefaultScreenshotFormat": {
+    "message": "Formato de captura predeterminado"
+  },
   "panelQualityTitle": {
     "message": "Calidad de exportación"
   },
@@ -382,7 +405,10 @@
     "message": "Modo de guardado"
   },
   "panelSaveModeBody": {
-    "message": "Cuando está activado, la extensión guarda en silencio. Los archivos se guardan en la carpeta Downloads predeterminada del navegador."
+    "message": "Controla si la ruta local final se copia al guardar (sincronizado con el menú contextual) y si los archivos se guardan en silencio en la carpeta Downloads predeterminada."
+  },
+  "toggleCopyPathAfterSave": {
+    "message": "Copiar ruta del archivo al guardar"
   },
   "toggleSilentSave": {
     "message": "Activar guardado silencioso"

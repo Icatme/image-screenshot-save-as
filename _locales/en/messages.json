@@ -124,14 +124,28 @@
   "menuRoot": {
     "message": "Image Save As"
   },
-  "menuActionSave": {
-    "message": "Save"
+  "menuImageOriginal": {
+    "message": "Save original"
   },
-  "menuActionCopyPath": {
-    "message": "Save && Copy Path"
+  "menuCopyPathAfterSave": {
+    "message": "Copy file path after saving"
   },
   "menuScreenshotRoot": {
     "message": "Page Screenshot As"
+  },
+  "menuScreenshotModeWithFormat": {
+    "message": "$MODE$ ($FORMAT$)",
+    "placeholders": {
+      "mode": {
+        "content": "$1"
+      },
+      "format": {
+        "content": "$2"
+      }
+    }
+  },
+  "menuScreenshotOtherFormats": {
+    "message": "Other formats"
   },
   "menuScreenshotVisible": {
     "message": "Visible Page"
@@ -366,6 +380,15 @@
   "languageOptionGerman": {
     "message": "German"
   },
+  "panelScreenshotTitle": {
+    "message": "Page Screenshots"
+  },
+  "panelScreenshotBody": {
+    "message": "Choose the default format used directly in the page screenshot menu. Other formats remain under Other formats."
+  },
+  "labelDefaultScreenshotFormat": {
+    "message": "Default screenshot format"
+  },
   "panelQualityTitle": {
     "message": "Export Quality"
   },
@@ -382,7 +405,10 @@
     "message": "Save Mode"
   },
   "panelSaveModeBody": {
-    "message": "When enabled, the extension saves silently. Files go to the browser's default Downloads folder."
+    "message": "Control whether the final local file path is copied after saving (synced with the context menu) and whether files save silently to the default Downloads folder."
+  },
+  "toggleCopyPathAfterSave": {
+    "message": "Copy file path after saving"
   },
   "toggleSilentSave": {
     "message": "Enable silent save"

@@ -10,6 +10,7 @@ globalThis.chrome = {
           jpgQuality: "not-a-number",
           webpQuality: 5,
           silentSave: 1,
+          defaultScreenshotFormat: "bmp",
           localeOverride: "fr",
         };
       },
@@ -31,6 +32,8 @@ test("getSettings normalizes persisted values", async () => {
     jpgQuality: DEFAULT_SETTINGS.jpgQuality,
     webpQuality: 1,
     silentSave: true,
+    copyPathAfterSave: true,
+    defaultScreenshotFormat: "png",
     localeOverride: "auto",
   });
 });
@@ -40,6 +43,8 @@ test("saveSettings clamps quality before storage", async () => {
     jpgQuality: 0,
     webpQuality: 0.333,
     silentSave: false,
+    copyPathAfterSave: false,
+    defaultScreenshotFormat: "webp",
     localeOverride: "de",
   });
 
@@ -47,29 +52,39 @@ test("saveSettings clamps quality before storage", async () => {
     jpgQuality: 0.1,
     webpQuality: 0.333,
     silentSave: false,
+    copyPathAfterSave: false,
+    defaultScreenshotFormat: "webp",
     localeOverride: "de",
   });
   assert.deepEqual(writes.at(-1), result);
 });
 
-test("saveSettings falls back to default quality for empty, null, or boolean inputs", async () => {
+test("saveSettings falls back to default quality, copyPathAfterSave, and screenshot format for empty, null, or invalid inputs", async () => {
   const result = await saveSettings({
     jpgQuality: "",
     webpQuality: null,
     silentSave: false,
+    copyPathAfterSave: null,
+    defaultScreenshotFormat: "gif",
     localeOverride: "auto",
   });
 
   assert.equal(result.jpgQuality, DEFAULT_SETTINGS.jpgQuality);
   assert.equal(result.webpQuality, DEFAULT_SETTINGS.webpQuality);
+  assert.equal(result.copyPathAfterSave, true);
+  assert.equal(result.defaultScreenshotFormat, "png");
 
   const booleanResult = await saveSettings({
     jpgQuality: false,
     webpQuality: true,
     silentSave: false,
+    copyPathAfterSave: false,
+    defaultScreenshotFormat: "jpg",
     localeOverride: "auto",
   });
 
   assert.equal(booleanResult.jpgQuality, DEFAULT_SETTINGS.jpgQuality);
   assert.equal(booleanResult.webpQuality, DEFAULT_SETTINGS.webpQuality);
+  assert.equal(booleanResult.copyPathAfterSave, false);
+  assert.equal(booleanResult.defaultScreenshotFormat, "jpg");
 });

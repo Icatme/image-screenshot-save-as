@@ -291,7 +291,7 @@ test("restricted Chrome Web Store actions stop before script injection", async (
 		);
 		menuClickListener(
 			{
-				menuItemId: "action:png:save",
+				menuItemId: "image:png",
 				srcUrl: "blob:https://chromewebstore.google.com/image",
 				pageUrl:
 					"https://chromewebstore.google.com/detail/example/extension-id",
@@ -305,7 +305,7 @@ test("restricted Chrome Web Store actions stop before script injection", async (
 		);
 		menuClickListener(
 			{
-				menuItemId: "screenshot:region:png:save",
+				menuItemId: "screenshot:region:png",
 				pageUrl:
 					"https://chromewebstore.google.com/detail/example/extension-id",
 			},
@@ -503,7 +503,7 @@ test(
 			);
 			menuClickListener(
 				{
-					menuItemId: "screenshot:region:png:save",
+					menuItemId: "screenshot:region:png",
 					pageUrl: tab.url,
 				},
 				tab,
@@ -692,7 +692,7 @@ test(
 			storage: {
 				local: localStorage,
 				session: sessionStorage,
-				sync: createStorageArea({ localeOverride: "es" }),
+				sync: createStorageArea({ localeOverride: "es", copyPathAfterSave: false }),
 				onChanged: { addListener() {} },
 			},
 			action: {
@@ -766,7 +766,7 @@ test(
 			);
 			menuClickListener(
 				{
-					menuItemId: "screenshot:full-page:png:save",
+					menuItemId: "screenshot:full-page:png",
 					pageUrl: tab.url,
 				},
 				tab,
@@ -961,7 +961,7 @@ test(
 			);
 			menuClickListener(
 				{
-					menuItemId: "screenshot:full-page:png:save",
+					menuItemId: "screenshot:full-page:png",
 					pageUrl: tab.url,
 				},
 				tab,
@@ -1249,4 +1249,492 @@ test("one malformed pending download does not block recovery of later records", 
 			assert.equal(localArea.state.saveHistory?.[0]?.id, "valid-recovery");
 		},
 	);
+});
+
+test("context menus flatten actions, promote default screenshot format, and sync copy-path checkbox", async () => {
+	let installedListener;
+	let menuClickListener;
+	let storageChangedListener;
+	const createdMenus = [];
+	const updatedMenus = [];
+	const copiedTexts = [];
+	const syncStorage = createStorageArea({
+		localeOverride: "de",
+		copyPathAfterSave: true,
+		defaultScreenshotFormat: "png",
+	});
+	const localStorage = createStorageArea();
+	const sessionStorage = createStorageArea();
+	const catalog = {
+		extActionTitle: { message: "Image & Screenshot Save As" },
+		menuRoot: { message: "Image Save As" },
+		menuImageOriginal: { message: "Save original" },
+		menuCopyPathAfterSave: { message: "Copy file path after saving" },
+		menuScreenshotRoot: { message: "Page Screenshot As" },
+		menuScreenshotVisible: { message: "Visible Page" },
+		menuScreenshotRegion: { message: "Select Area" },
+		menuScreenshotFullPage: { message: "Full Page" },
+		menuScreenshotModeWithFormat: {
+			message: "$MODE$ ($FORMAT$)",
+			placeholders: {
+				mode: { content: "$1" },
+				format: { content: "$2" },
+			},
+		},
+		menuScreenshotOtherFormats: { message: "Other formats" },
+		notifySavedAndCopiedTitle: { message: "Saved and copied" },
+		notifySavedAndCopiedMessage: {
+			message: "Saved as $FORMAT$ and copied.",
+			placeholders: { format: { content: "$1" } },
+		},
+		notifyScreenshotSavedTitle: { message: "Screenshot saved" },
+		notifyScreenshotSavedMessage: {
+			message: "Screenshot saved as $FORMAT$.",
+			placeholders: { format: { content: "$1" } },
+		},
+	};
+	const tab = {
+		id: 91,
+		windowId: 9,
+		title: "Example",
+		url: "https://example.test/",
+	};
+	const originalCreateImageBitmap = globalThis.createImageBitmap;
+	const originalOffscreenCanvas = globalThis.OffscreenCanvas;
+	const originalSetTimeout = globalThis.setTimeout;
+	let nextDownloadId = 900;
+
+	globalThis.setTimeout = (callback, delay, ...args) => {
+		if (delay === 8000) {
+			return 0;
+		}
+		return originalSetTimeout(callback, delay <= 550 ? 0 : delay, ...args);
+	};
+	globalThis.createImageBitmap = async () => ({
+		width: 10,
+		height: 10,
+		close() {},
+	});
+	globalThis.OffscreenCanvas = class {
+		constructor(width, height) {
+			this.width = width;
+			this.height = height;
+		}
+		getContext() {
+			return { drawImage() {}, fillRect() {} };
+		}
+		async convertToBlob({ type }) {
+			return new Blob(["img"], { type });
+		}
+	};
+
+	globalThis.chrome = {
+		runtime: {
+			onInstalled: {
+				addListener(listener) {
+					installedListener = listener;
+				},
+			},
+			onStartup: { addListener() {} },
+			onMessage: { addListener() {} },
+			getURL(resource) {
+				return resource.startsWith("_locales/")
+					? `data:application/json,${encodeURIComponent(JSON.stringify(catalog))}`
+					: `chrome-extension://test/${resource}`;
+			},
+			async getContexts() {
+				return [{}];
+			},
+			async sendMessage(message) {
+				if (message.type === "COMMIT_BLOB_URL") {
+					return { ok: true, url: `blob:menu-${nextDownloadId}` };
+				}
+				if (message.type === "WRITE_TEXT") {
+					copiedTexts.push(message.text);
+					return { ok: true };
+				}
+				if (message.type === "GET_OFFSCREEN_STATUS") {
+					return { ok: true, activeOperations: 0, blobUrlCount: 0 };
+				}
+				return { ok: true };
+			},
+		},
+		i18n: {
+			getUILanguage: () => "en",
+			getMessage: (key) => key,
+		},
+		contextMenus: {
+			onClicked: {
+				addListener(listener) {
+					menuClickListener = listener;
+				},
+			},
+			async removeAll() {
+				createdMenus.length = 0;
+			},
+			create(menu) {
+				createdMenus.push(menu);
+			},
+			async update(id, properties) {
+				updatedMenus.push({ id, properties });
+				const entry = createdMenus.find((menu) => menu.id === id);
+				if (entry) {
+					Object.assign(entry, properties);
+				}
+			},
+		},
+		downloads: {
+			onChanged: { addListener() {} },
+			async download() {
+				return ++nextDownloadId;
+			},
+			async search({ id }) {
+				return [
+					{
+						id,
+						state: "complete",
+						filename: `C:\\Downloads\\file-${id}.png`,
+					},
+				];
+			},
+			async cancel() {},
+		},
+		storage: {
+			local: localStorage,
+			session: sessionStorage,
+			sync: syncStorage,
+			onChanged: {
+				addListener(listener) {
+					storageChangedListener = listener;
+				},
+			},
+		},
+		action: {
+			onClicked: { addListener() {} },
+			async setTitle() {},
+			async setBadgeText() {},
+			async setBadgeBackgroundColor() {},
+		},
+		notifications: {
+			async create(id) {
+				return id;
+			},
+		},
+		tabs: {
+			async query() {
+				return [tab];
+			},
+			async captureVisibleTab() {
+				return "data:image/png;base64,AA==";
+			},
+			async get() {
+				return tab;
+			},
+		},
+		offscreen: {
+			async createDocument() {},
+			async closeDocument() {},
+		},
+	};
+
+	try {
+		await import(
+			`../src/background/service-worker.js?menu-sync=${crypto.randomUUID()}`
+		);
+		installedListener();
+		await waitUntil(
+			() => createdMenus.some((menu) => menu.id === "toggle:copy-path:page"),
+			"Context menus were not built on install.",
+		);
+
+		assert.deepEqual(
+			createdMenus
+				.filter((menu) => menu.parentId === "img-save-as")
+				.map((menu) => ({
+					id: menu.id,
+					type: menu.type,
+					checked: menu.checked,
+				})),
+			[
+				{ id: "image:png", type: undefined, checked: undefined },
+				{ id: "image:jpg", type: undefined, checked: undefined },
+				{ id: "image:webp", type: undefined, checked: undefined },
+				{ id: "image:original", type: undefined, checked: undefined },
+				{ id: "image:copy-path-separator", type: "separator", checked: undefined },
+				{ id: "toggle:copy-path:image", type: "checkbox", checked: true },
+			],
+		);
+		assert.deepEqual(
+			createdMenus
+				.filter((menu) => menu.parentId === "page-screenshot-as")
+				.map((menu) => ({
+					id: menu.id,
+					title: menu.title,
+					type: menu.type,
+					checked: menu.checked,
+				})),
+			[
+				{ id: "screenshot:visible:png", title: "Visible Page (PNG)", type: undefined, checked: undefined },
+				{ id: "screenshot:region:png", title: "Select Area (PNG)", type: undefined, checked: undefined },
+				{ id: "screenshot:full-page:png", title: "Full Page (PNG)", type: undefined, checked: undefined },
+				{ id: "screenshot-other-formats", title: "Other formats", type: undefined, checked: undefined },
+				{ id: "screenshot:copy-path-separator", title: undefined, type: "separator", checked: undefined },
+				{ id: "toggle:copy-path:page", title: "Copy file path after saving", type: "checkbox", checked: true },
+			],
+		);
+		assert.deepEqual(
+			createdMenus
+				.filter((menu) => menu.parentId === "screenshot-other-formats")
+				.map((menu) => menu.id),
+			["screenshot-other-format:jpg", "screenshot-other-format:webp"],
+		);
+
+		menuClickListener({ menuItemId: "screenshot:visible:png", pageUrl: tab.url }, tab);
+		await waitUntil(
+			() => localStorage.state.saveHistory?.length === 1,
+			"First screenshot did not complete.",
+		);
+		assert.equal(localStorage.state.saveHistory[0].action, "copy-path");
+		assert.deepEqual(copiedTexts, ["C:\\Downloads\\file-901.png"]);
+
+		menuClickListener(
+			{ menuItemId: "toggle:copy-path:image", checked: false },
+			tab,
+		);
+		await waitUntil(
+			() => syncStorage.state.copyPathAfterSave === false,
+			"Toggling copy-path checkbox did not persist false.",
+		);
+		assert.equal(
+			createdMenus.find((menu) => menu.id === "toggle:copy-path:image")?.checked,
+			false,
+		);
+		assert.equal(
+			createdMenus.find((menu) => menu.id === "toggle:copy-path:page")?.checked,
+			false,
+		);
+		assert.ok(
+			updatedMenus.some(
+				(entry) =>
+					entry.id === "toggle:copy-path:page" && entry.properties.checked === false,
+			),
+		);
+
+		menuClickListener({ menuItemId: "screenshot:visible:png", pageUrl: tab.url }, tab);
+		await waitUntil(
+			() => localStorage.state.saveHistory?.length === 2,
+			"Second screenshot did not complete.",
+		);
+		assert.equal(localStorage.state.saveHistory[0].action, "save");
+		assert.equal(copiedTexts.length, 1);
+
+		syncStorage.state.defaultScreenshotFormat = "jpg";
+		storageChangedListener(
+			{ defaultScreenshotFormat: { oldValue: "png", newValue: "jpg" } },
+			"sync",
+		);
+		await waitUntil(
+			() =>
+				createdMenus.some(
+					(menu) =>
+						menu.id === "screenshot:visible:jpg" &&
+						menu.parentId === "page-screenshot-as",
+				),
+			"Screenshot menu did not rebuild for updated default format.",
+		);
+		assert.equal(
+			createdMenus.find((menu) => menu.id === "screenshot:visible:jpg")?.title,
+			"Visible Page (JPG)",
+		);
+		assert.deepEqual(
+			createdMenus
+				.filter((menu) => menu.parentId === "screenshot-other-formats")
+				.map((menu) => menu.id),
+			["screenshot-other-format:png", "screenshot-other-format:webp"],
+		);
+		assert.equal(
+			createdMenus.find((menu) => menu.id === "toggle:copy-path:page")?.checked,
+			false,
+		);
+	} finally {
+		globalThis.setTimeout = originalSetTimeout;
+		if (originalCreateImageBitmap === undefined) {
+			delete globalThis.createImageBitmap;
+		} else {
+			globalThis.createImageBitmap = originalCreateImageBitmap;
+		}
+		if (originalOffscreenCanvas === undefined) {
+			delete globalThis.OffscreenCanvas;
+		} else {
+			globalThis.OffscreenCanvas = originalOffscreenCanvas;
+		}
+		delete globalThis.chrome;
+	}
+});
+
+test("image:original downloads raw GIF bytes without canvas re-encoding and copies path", async () => {
+	let menuClickListener;
+	let decodeCalled = false;
+	const downloadCalls = [];
+	const copiedTexts = [];
+	const uploadedBase64 = [];
+	const localStorage = createStorageArea();
+	const sessionStorage = createStorageArea();
+	const gifBytes = new Uint8Array([
+		0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x02, 0x00, 0x02, 0x00, 0x00, 0x3b,
+	]);
+	const originalFetch = globalThis.fetch;
+	const originalCreateImageBitmap = globalThis.createImageBitmap;
+	const originalSetTimeout = globalThis.setTimeout;
+
+	globalThis.setTimeout = (callback, delay, ...args) => {
+		if (delay === 8000) {
+			return 0;
+		}
+		return originalSetTimeout(callback, delay, ...args);
+	};
+	globalThis.createImageBitmap = async () => {
+		decodeCalled = true;
+		throw new Error("Original GIF save must not decode via createImageBitmap");
+	};
+	globalThis.fetch = async (url) => {
+		if (String(url).startsWith("data:application/json,")) {
+			return originalFetch(url);
+		}
+		return new Response(gifBytes, {
+			status: 200,
+			headers: { "content-type": "image/gif" },
+		});
+	};
+
+	globalThis.chrome = {
+		runtime: {
+			onInstalled: { addListener() {} },
+			onStartup: { addListener() {} },
+			onMessage: { addListener() {} },
+			getURL(resource) {
+				return resource.startsWith("_locales/")
+					? `data:application/json,${encodeURIComponent("{}")}`
+					: `chrome-extension://test/${resource}`;
+			},
+			async getContexts() {
+				return [{}];
+			},
+			async sendMessage(message) {
+				if (message.type === "APPEND_BLOB_URL_CHUNK") {
+					uploadedBase64.push(message.base64);
+					return { ok: true };
+				}
+				if (message.type === "COMMIT_BLOB_URL") {
+					return { ok: true, url: "blob:original-gif" };
+				}
+				if (message.type === "WRITE_TEXT") {
+					copiedTexts.push(message.text);
+					return { ok: true };
+				}
+				if (message.type === "GET_OFFSCREEN_STATUS") {
+					return { ok: true, activeOperations: 0, blobUrlCount: 0 };
+				}
+				return { ok: true };
+			},
+		},
+		i18n: {
+			getUILanguage: () => "en",
+			getMessage: (key) => key,
+		},
+		contextMenus: {
+			onClicked: {
+				addListener(listener) {
+					menuClickListener = listener;
+				},
+			},
+		},
+		downloads: {
+			onChanged: { addListener() {} },
+			async download(options) {
+				downloadCalls.push(options);
+				return 951;
+			},
+			async search() {
+				return [
+					{
+						id: 951,
+						state: "complete",
+						filename: "C:\\Downloads\\party-parrot.gif",
+					},
+				];
+			},
+			async cancel() {},
+		},
+		storage: {
+			local: localStorage,
+			session: sessionStorage,
+			sync: createStorageArea({ localeOverride: "auto", copyPathAfterSave: true }),
+			onChanged: { addListener() {} },
+		},
+		action: {
+			onClicked: { addListener() {} },
+			async setTitle() {},
+			async setBadgeText() {},
+			async setBadgeBackgroundColor() {},
+		},
+		notifications: {
+			async create(id) {
+				return id;
+			},
+		},
+		offscreen: {
+			async createDocument() {},
+			async closeDocument() {},
+		},
+	};
+
+	try {
+		await import(
+			`../src/background/service-worker.js?original-gif=${crypto.randomUUID()}`
+		);
+		menuClickListener(
+			{
+				menuItemId: "image:original",
+				srcUrl: "https://cdn.example.test/gifs/party-parrot.gif",
+				pageUrl: "https://example.test/post",
+				frameId: 0,
+			},
+			{
+				id: 92,
+				windowId: 10,
+				title: "Post",
+			},
+		);
+		await waitUntil(
+			() => localStorage.state.saveHistory?.length === 1,
+			"Original GIF save did not complete.",
+		);
+
+		assert.equal(decodeCalled, false);
+		assert.deepEqual(
+			new Uint8Array(Buffer.from(uploadedBase64.join(""), "base64")),
+			gifBytes,
+		);
+		assert.deepEqual(downloadCalls, [
+			{
+				url: "blob:original-gif",
+				filename: "party-parrot.gif",
+				saveAs: true,
+				conflictAction: "uniquify",
+			},
+		]);
+		assert.equal(localStorage.state.saveHistory[0].format, "gif");
+		assert.equal(localStorage.state.saveHistory[0].action, "copy-path");
+		assert.deepEqual(copiedTexts, ["C:\\Downloads\\party-parrot.gif"]);
+	} finally {
+		globalThis.fetch = originalFetch;
+		globalThis.setTimeout = originalSetTimeout;
+		if (originalCreateImageBitmap === undefined) {
+			delete globalThis.createImageBitmap;
+		} else {
+			globalThis.createImageBitmap = originalCreateImageBitmap;
+		}
+		delete globalThis.chrome;
+	}
 });

@@ -23,8 +23,20 @@ const WINDOWS_RESERVED_NAMES = new Set([
   "lpt9"
 ]);
 
+const ALLOWED_IMAGE_EXTENSIONS = new Set([
+  "png",
+  "jpg",
+  "webp",
+  "gif",
+  "avif",
+  "svg",
+  "bmp",
+  "ico",
+  "apng"
+]);
+
 export function buildDownloadPath({ srcUrl, pageTitle, format }) {
-  const ext = normalizeExtension(format);
+  const ext = normalizeImageExtension(format);
   const imageName = sanitizeSegment(extractImageName(srcUrl) || "");
   const safeTitle = sanitizeSegment(pageTitle || "");
   const filenameStem = imageName || safeTitle || "image";
@@ -39,7 +51,7 @@ export function buildScreenshotDownloadPath({
   format,
   partial = false
 }) {
-  const ext = normalizeExtension(format);
+  const ext = normalizeScreenshotExtension(format);
   const safeTitle = sanitizeSegment(pageTitle || "");
   const safePageName = sanitizeSegment(extractPageName(pageUrl) || "");
   const suffix = mode === "full-page"
@@ -69,7 +81,20 @@ export function buildScreenshotPageFilename(filename, index, partial = false) {
   return `${stem}${suffix}.${match[2].toLowerCase()}`;
 }
 
-function normalizeExtension(format) {
+function normalizeImageExtension(format) {
+  const normalized = typeof format === "string" ? format.toLowerCase() : "";
+  if (normalized === "jpeg") {
+    return "jpg";
+  }
+
+  if (ALLOWED_IMAGE_EXTENSIONS.has(normalized)) {
+    return normalized;
+  }
+
+  return "png";
+}
+
+function normalizeScreenshotExtension(format) {
   if (format === "jpg") {
     return "jpg";
   }
